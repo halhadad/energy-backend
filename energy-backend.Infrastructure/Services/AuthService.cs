@@ -4,15 +4,17 @@ using System.Security.Cryptography;
 using energy_backend.Data;
 using energy_backend.Entities;
 using energy_backend.Models;
+using energy_backend.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace energy_backend.Services
+namespace energy_backend.Infrastructure.Services
 {
     public class AuthService(EnergyDbContext context, IConfiguration configuration) : IAuthService
     {
-        public async Task<TokenResponseDto?> LoginAsync(UserDTO request)
+        public async Task<LoginResponseDto?> LoginAsync(UserRequestDto request)
         {
             var user = await context.Users.FirstOrDefaultAsync(x => x.Username == request.Username);
 
@@ -25,7 +27,17 @@ namespace energy_backend.Services
             var result = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (result == PasswordVerificationResult.Success)
             {
-                return await CreateTokenResponse(user);
+                return new LoginResponseDto
+                {
+                    AccessToken = CreateToken(user),
+                    RefreshToken = await GenerateAndSaveRefreshTokenAsync(user),
+                    User = new UserResponseDto
+                    {
+                        UserId = user.UserId,
+                        Username = user.Username,
+                        Role = user.Role,
+                    }
+                };
             }
             else
             {
@@ -42,7 +54,7 @@ namespace energy_backend.Services
             };
         }
 
-        public async Task<User?> RegisterAsync(UserDTO request)
+        public async Task<User?> RegisterAsync(UserRequestDto request)
         {
             if (await context.Users.AnyAsync(x => x.Username == request.Username))
             {
@@ -107,7 +119,7 @@ namespace energy_backend.Services
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Role, user.Role)
             };
 

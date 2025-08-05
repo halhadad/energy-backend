@@ -19,7 +19,7 @@ namespace energy_backend.Controllers
 
         [HttpPost]
         [Route("register")]
-        public async Task<ActionResult<User>> Register(UserDTO request)
+        public async Task<ActionResult<User>> Register(UserRequestDto request)
         {
             var user = await authService.RegisterAsync(request);
             if (user is null)
@@ -31,7 +31,7 @@ namespace energy_backend.Controllers
 
         [HttpPost]
         [Route("login")]
-        public async Task<ActionResult<TokenResponseDto>> Login(UserDTO request)
+        public async Task<ActionResult<TokenResponseDto>> Login(UserRequestDto request)
         {
             var response = await authService.LoginAsync(request);
             if (response is null)

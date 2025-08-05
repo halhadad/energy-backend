@@ -5,8 +5,8 @@ namespace energy_backend.Services
 {
     public interface IAuthService
     {
-        Task<User?> RegisterAsync(UserDTO request);
-        Task<TokenResponseDto?> LoginAsync(UserDTO request);
+        Task<User?> RegisterAsync(UserRequestDto request);
+        Task<LoginResponseDto?> LoginAsync(UserRequestDto request);
         Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto requestDto);
     }
 }

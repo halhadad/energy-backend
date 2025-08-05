@@ -1,4 +1,5 @@
 ﻿using energy_backend.Data;
+using energy_backend.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

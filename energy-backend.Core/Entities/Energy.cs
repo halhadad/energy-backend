@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
-
-namespace energy_backend
+﻿
+namespace energy_backend.Entities
 {
     public class Energy
     {
