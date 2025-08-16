@@ -9,8 +9,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Infrastructure.Services;
 using energy_backend.Infrastructure.Seeding;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Repositories;
+using energy_backend.Application.Services;
+using energy_backend.Hubs;
+using energy_backend.Infrastructure.SignalR;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,17 +57,43 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]))
         };
-    });
 
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/overviewHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+// Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<OrganisationAnalyticsService>();
 builder.Services.AddScoped<IOrganisationService, OrganisationService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
+builder.Services.AddScoped<IRealTimeService, RealTimeService>();
+
+// Repos
+builder.Services.AddScoped<IAggregatedEnergyRepository, AggregatedEnergyRepository>();
+builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
+builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
+builder.Services.AddSingleton<ConnectionTracker>();
+
+
 
 
 builder.Services.AddApplicationServices();
 
 builder.Services.AddSignalR();
-builder.Services.AddHostedService<OverviewDataBackgroundService>();
+
 builder.Services.AddHostedService<AggregationService>();
 builder.Services.AddHostedService<EnergyReadingSimulator>();
 
@@ -78,23 +108,26 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
-
-app.UseCors("AllowFrontend");
-
-app.UseAuthorization();
 
 //seeding
-/*using (var scope = app.Services.CreateScope())
+using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
     await SeedData.SeedEnergyReadingsEvery5SecAsync(context); // <- raw 5s data
     await SeedData.SeedAggregatedEnergyDbAsync(context);        // <- hourly aggregates
-}*/
+}
+
+
+
+
+app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+app.UseRouting(); 
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
-
-app.MapHub<energy_backend.Application.Hubs.OverviewHub>("/overviewHub");
-
+app.UseWebSockets();
+app.MapHub<RealTimeHub>("/overviewHub");
 
 app.Run();

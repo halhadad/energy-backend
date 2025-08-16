@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using energy_backend.Application.Models;
 using energy_backend.Entities;
 using energy_backend.Models;
 using energy_backend.Services;
@@ -86,8 +87,26 @@ namespace energy_backend.Controllers
             
         }
 
+        [HttpGet("GetOrganisationAnalytics/{organisationId}")]
+        public async Task<ActionResult<OrganisationAnalyticsDto>> GetOrganisationAnalytics(Guid organisationId)
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+
+            try
+            {
+                var organisationAnalytics = await orgService.GetOrganisationAnalyticsAsync(userId, organisationId);
+                return Ok(organisationAnalytics);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+        }
+
         // Tries to extract the user ID from the JWT claims.
-        
+
         private bool TryGetUserId(out Guid userId)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

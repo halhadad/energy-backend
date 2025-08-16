@@ -1,5 +1,6 @@
 ﻿namespace energy_backend.Entities
 {
+    // each device every 5 has reading
     public class EnergyReading
     {
         public Guid EnergyReadingId { get; set; }
