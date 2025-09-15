@@ -36,11 +36,7 @@ namespace energy_backend.Infrastructure.Seeding
                 while (currentTime <= endDate)
                 {
                     // Avoid accidental duplicate timestamps
-                    bool exists = await context.EnergyReadings
-                        .AnyAsync(r => r.DeviceId == device.DeviceId && r.Timestamp == currentTime);
-
-                    if (!exists)
-                    {
+                    
                         readings.Add(new EnergyReading
                         {
                             EnergyReadingId = Guid.NewGuid(),
@@ -48,7 +44,7 @@ namespace energy_backend.Infrastructure.Seeding
                             EnergyValue = (float)Math.Round(rng.NextDouble() * 0.01, 5),
                             Timestamp = currentTime
                         });
-                    }
+                    
                     currentTime = currentTime.AddSeconds(5);
                 }
 
@@ -86,20 +82,15 @@ namespace energy_backend.Infrastructure.Seeding
 
                 while (currentTime <= endDate)
                 {
-                    // Avoid duplicate periods
-                    bool exists = await context.AggregatedEnergies
-                        .AnyAsync(a => a.DeviceId == device.DeviceId && a.PeriodStartTime == currentTime);
-
-                    if (!exists)
-                    {
+                    
                         aggregates.Add(new AggregatedEnergy
                         {
                             Id = Guid.NewGuid(),
                             DeviceId = device.DeviceId,
                             PeriodStartTime = currentTime,
                             TotalKwh = (float)Math.Round(rng.NextDouble() * 3, 4)
-                        });
-                    }
+                       });
+                    
 
                     currentTime = currentTime.AddHours(1);
                 }

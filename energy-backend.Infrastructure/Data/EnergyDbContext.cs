@@ -15,5 +15,19 @@ namespace energy_backend.Data
         public DbSet<EnergyReading> EnergyReadings => Set<EnergyReading>();
         public DbSet<AggregatedEnergy> AggregatedEnergies => Set<AggregatedEnergy>();
 
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<EnergyReading>()
+                .HasIndex(e => new { e.DeviceId, e.Timestamp })
+                .IsUnique();
+
+            modelBuilder.Entity<AggregatedEnergy>()
+                .HasIndex(a => new { a.DeviceId, a.PeriodStartTime })
+                .IsUnique();
+        }
     }
+
+    
+    
 }
