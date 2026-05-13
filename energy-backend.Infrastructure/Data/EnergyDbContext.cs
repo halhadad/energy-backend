@@ -14,7 +14,8 @@ namespace energy_backend.Data
         public DbSet<Alert> Alerts => Set<Alert>();
         public DbSet<EnergyReading> EnergyReadings => Set<EnergyReading>();
         public DbSet<AggregatedEnergy> AggregatedEnergies => Set<AggregatedEnergy>();
-
+        public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
+        public DbSet<DeviceConsumptionSummary> DeviceConsumptionSummaries => Set<DeviceConsumptionSummary>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

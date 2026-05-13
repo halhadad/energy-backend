@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using energy_backend.Data;
 
@@ -11,9 +12,11 @@ using energy_backend.Data;
 namespace energy_backend.Migrations
 {
     [DbContext(typeof(EnergyDbContext))]
-    partial class EnergyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250915120303_EnergySummary")]
+    partial class EnergySummary
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,17 +61,11 @@ namespace energy_backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("OrganisationId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<float>("Threshold")
                         .HasColumnType("real");
 
                     b.Property<DateTime>("TriggeredAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<float>("TriggeredEnergy")
-                        .HasColumnType("real");
 
                     b.HasKey("AlertEventId");
 
@@ -110,12 +107,6 @@ namespace energy_backend.Migrations
                     b.Property<Guid>("AlertId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastTriggeredAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()

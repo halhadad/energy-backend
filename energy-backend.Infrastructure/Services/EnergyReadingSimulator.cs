@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using energy_backend.Core.Common;
+using energy_backend.Core.Entities;
 using energy_backend.Data;
 using energy_backend.Entities;
 using energy_backend.Infrastructure;
@@ -78,6 +79,35 @@ namespace energy_backend.Infrastructure.Services
                         await db.EnergyReadings.AddRangeAsync(toInsert, stoppingToken);
                         await db.SaveChangesAsync(stoppingToken);
                         _logger.LogInformation("Simulator inserted {Count} readings for {Slot}", toInsert.Count, nowSlot);
+
+                        // Summary
+                        foreach (var r in toInsert)
+                        {
+                            var month = r.Timestamp.Month;
+                            var year = r.Timestamp.Year;
+
+                            var summary = await db.DeviceConsumptionSummaries
+                                .FirstOrDefaultAsync(s => s.DeviceId == r.DeviceId && s.Year == year && s.Month == month, stoppingToken);
+
+                            if (summary == null)
+                            {
+                                summary = new DeviceConsumptionSummary
+                                {
+                                    DeviceConsumptionSummaryId = Guid.NewGuid(),
+                                    DeviceId = r.DeviceId,
+                                    Year = year,
+                                    Month = month,
+                                    TotalConsumption = 0,
+                                    LastUpdated = r.Timestamp
+                                };
+                                db.DeviceConsumptionSummaries.Add(summary);
+                            }
+
+                            summary.TotalConsumption += r.EnergyValue;
+                            summary.LastUpdated = r.Timestamp;
+                        }
+                        await db.SaveChangesAsync(stoppingToken);
+
                     }
                 }
                 catch (DbUpdateException ex)

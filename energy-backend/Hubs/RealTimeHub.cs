@@ -16,7 +16,7 @@ namespace energy_backend.Hubs
     [Authorize]
     public class RealTimeHub : Hub
     {
-        private readonly ConnectionTracker _connectionTracker;
+        private readonly RealTimeConnectionTracker _connectionTracker;
         private readonly ILogger<RealTimeHub> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHubContext<RealTimeHub> _hubContext;
@@ -26,7 +26,7 @@ namespace energy_backend.Hubs
             = new ConcurrentDictionary<string, CancellationTokenSource>();
 
         public RealTimeHub(
-            ConnectionTracker connectionTracker,
+            RealTimeConnectionTracker connectionTracker,
             ILogger<RealTimeHub> logger,
             IServiceScopeFactory scopeFactory,
             IHubContext<RealTimeHub> hubContext)

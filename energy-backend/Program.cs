@@ -1,20 +1,22 @@
 using System.Text;
 using energy_backend.Application;
-using energy_backend.Data;
 using energy_backend.Application.Hubs;
+using energy_backend.Application.Services;
+using energy_backend.Core.Interfaces;
+using energy_backend.Data;
+using energy_backend.Hubs;
 using energy_backend.Infrastructure;
+using energy_backend.Infrastructure.Repositories;
+using energy_backend.Infrastructure.Seeding;
 using energy_backend.Infrastructure.Services;
+using energy_backend.Infrastructure.SignalR;
+using energy_backend.RealTime;
+using energy_backend.RealTime.energy_backend.Application.Realtime;
 using energy_backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using energy_backend.Infrastructure.Seeding;
-using energy_backend.Core.Interfaces;
-using energy_backend.Infrastructure.Repositories;
-using energy_backend.Application.Services;
-using energy_backend.Hubs;
-using energy_backend.Infrastructure.SignalR;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,18 +62,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.Events = new JwtBearerEvents
         {
+            
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
 
+                // Add AlertsHub here
                 if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/overviewHub"))
+                    (path.StartsWithSegments("/overviewHub") || path.StartsWithSegments("/hubs/alerts")))
                 {
                     context.Token = accessToken;
                 }
                 return Task.CompletedTask;
             }
+            
+
         };
     });
 // Services
@@ -80,12 +86,14 @@ builder.Services.AddScoped<OrganisationAnalyticsService>();
 builder.Services.AddScoped<IOrganisationService, OrganisationService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IRealTimeService, RealTimeService>();
+builder.Services.AddScoped<IAlertService, AlertsService>();
 
 // Repos
+builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IAggregatedEnergyRepository, AggregatedEnergyRepository>();
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
-builder.Services.AddSingleton<ConnectionTracker>();
+builder.Services.AddSingleton<RealTimeConnectionTracker>();
 
 
 
@@ -96,6 +104,14 @@ builder.Services.AddSignalR();
 
 builder.Services.AddHostedService<AggregationService>();
 builder.Services.AddHostedService<EnergyReadingSimulator>();
+builder.Services.AddHostedService<SummaryBackfillService>();
+
+
+builder.Services.AddSingleton<AlertsConnectionTracker>();
+builder.Services.AddScoped<IAlertsNotifier, SignalRAlertsNotifier>();
+builder.Services.AddHostedService<AlertsMonitorService>();
+
+
 
 
 
@@ -129,5 +145,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.UseWebSockets();
 app.MapHub<RealTimeHub>("/overviewHub");
+app.MapHub<AlertsHub>("/hubs/alerts");
 
 app.Run();

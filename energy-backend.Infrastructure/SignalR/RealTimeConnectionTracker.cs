@@ -7,7 +7,7 @@ namespace energy_backend.Infrastructure.SignalR
     // Lightweight in-memory tracker for active SignalR connections
     // Holds mapping: ConnectionId -> (UserId, OrganisationId)
     // Registered as a singleton in DI.
-    public class ConnectionTracker
+    public class RealTimeConnectionTracker
     {
         private readonly Dictionary<string, (Guid UserId, Guid OrganisationId)> _connections
             = new Dictionary<string, (Guid, Guid)>();
