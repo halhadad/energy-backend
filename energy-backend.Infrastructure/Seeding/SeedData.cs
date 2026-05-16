@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using energy_backend.Core.Entities;
 using energy_backend.Data;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace energy_backend.Infrastructure.Seeding
@@ -61,46 +61,114 @@ namespace energy_backend.Infrastructure.Seeding
 
         public static async Task SeedAggregatedEnergyDbAsync(EnergyDbContext context)
         {
-            var devices = await context.Devices.AsNoTracking().ToListAsync();
+            var devices = await context.Devices.Include(d => d.Organisation).AsNoTracking().ToListAsync();
             var startDate = DateTime.UtcNow.AddDays(-7).Date;
             var endDate = DateTime.UtcNow;
             var rng = new Random();
 
             foreach (var device in devices)
             {
-                var lastAggregate = await context.AggregatedEnergies
+                var orgId = device.OrganisationId;
+
+                // 1. Seed Minute Aggregates
+                var lastMinute = await context.AggregateMinuteEnergies
                     .Where(a => a.DeviceId == device.DeviceId)
-                    .OrderByDescending(a => a.PeriodStartTime)
-                    .Select(a => a.PeriodStartTime)
+                    .OrderByDescending(a => a.Timestamp)
+                    .Select(a => a.Timestamp)
                     .FirstOrDefaultAsync();
-
-                var currentTime = lastAggregate != default
-                    ? lastAggregate.AddHours(1)
-                    : startDate;
-
-                var aggregates = new List<AggregatedEnergy>();
-
-                while (currentTime <= endDate)
+                
+                var minuteTime = lastMinute != default ? lastMinute.AddMinutes(1) : startDate;
+                var minuteAggregates = new List<AggregateMinuteEnergy>();
+                
+                while (minuteTime <= endDate)
                 {
-                    
-                        aggregates.Add(new AggregatedEnergy
-                        {
-                            Id = Guid.NewGuid(),
-                            DeviceId = device.DeviceId,
-                            PeriodStartTime = currentTime,
-                            TotalKwh = (float)Math.Round(rng.NextDouble() * 3, 4)
-                       });
-                    
-
-                    currentTime = currentTime.AddHours(1);
+                    minuteAggregates.Add(new AggregateMinuteEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = orgId,
+                        DeviceId = device.DeviceId,
+                        Timestamp = minuteTime,
+                        TotalEnergy = (float)Math.Round(rng.NextDouble() * 0.05, 4),
+                        AverageWatts = (float)rng.Next(50, 500),
+                        MinWatts = 40,
+                        MaxWatts = 600,
+                        DataPointsCount = 12
+                    });
+                    minuteTime = minuteTime.AddMinutes(1);
+                    if (minuteAggregates.Count >= 2000)
+                    {
+                        await context.AggregateMinuteEnergies.AddRangeAsync(minuteAggregates);
+                        await context.SaveChangesAsync();
+                        minuteAggregates.Clear();
+                    }
+                }
+                if (minuteAggregates.Count > 0)
+                {
+                    await context.AggregateMinuteEnergies.AddRangeAsync(minuteAggregates);
+                    await context.SaveChangesAsync();
                 }
 
-                // Chunk insert
-                const int chunkSize = 1000;
-                for (int i = 0; i < aggregates.Count; i += chunkSize)
+                // 2. Seed Hour Aggregates
+                var lastHour = await context.AggregateHourEnergies
+                    .Where(a => a.DeviceId == device.DeviceId)
+                    .OrderByDescending(a => a.Timestamp)
+                    .Select(a => a.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                var hourTime = lastHour != default ? lastHour.AddHours(1) : startDate;
+                var hourAggregates = new List<AggregateHourEnergy>();
+                
+                while (hourTime <= endDate)
                 {
-                    var chunk = aggregates.Skip(i).Take(chunkSize).ToList();
-                    await context.AggregatedEnergies.AddRangeAsync(chunk);
+                    hourAggregates.Add(new AggregateHourEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = orgId,
+                        DeviceId = device.DeviceId,
+                        Timestamp = hourTime,
+                        TotalEnergy = (float)Math.Round(rng.NextDouble() * 3, 4),
+                        AverageWatts = (float)rng.Next(50, 500),
+                        MinWatts = 40,
+                        MaxWatts = 600,
+                        DataPointsCount = 720
+                    });
+                    hourTime = hourTime.AddHours(1);
+                }
+                if (hourAggregates.Count > 0)
+                {
+                    await context.AggregateHourEnergies.AddRangeAsync(hourAggregates);
+                    await context.SaveChangesAsync();
+                }
+
+                // 3. Seed Day Aggregates
+                var lastDay = await context.AggregateDayEnergies
+                    .Where(a => a.DeviceId == device.DeviceId)
+                    .OrderByDescending(a => a.Timestamp)
+                    .Select(a => a.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                var dayTime = lastDay != default ? lastDay.AddDays(1) : startDate;
+                var dayAggregates = new List<AggregateDayEnergy>();
+                
+                while (dayTime <= endDate)
+                {
+                    dayAggregates.Add(new AggregateDayEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = orgId,
+                        DeviceId = device.DeviceId,
+                        Timestamp = dayTime,
+                        TotalEnergy = (float)Math.Round(rng.NextDouble() * 50, 4),
+                        AverageWatts = (float)rng.Next(50, 500),
+                        MinWatts = 40,
+                        MaxWatts = 600,
+                        DataPointsCount = 17280
+                    });
+                    dayTime = dayTime.AddDays(1);
+                }
+                if (dayAggregates.Count > 0)
+                {
+                    await context.AggregateDayEnergies.AddRangeAsync(dayAggregates);
                     await context.SaveChangesAsync();
                 }
             }

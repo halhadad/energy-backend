@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using energy_backend.Application.Models;
 using energy_backend.Application.Services;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using energy_backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

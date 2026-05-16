@@ -1,5 +1,4 @@
-﻿using energy_backend.Core.Entities;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace energy_backend.Data
@@ -17,6 +16,13 @@ namespace energy_backend.Data
         public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
         public DbSet<DeviceConsumptionSummary> DeviceConsumptionSummaries => Set<DeviceConsumptionSummary>();
 
+        // New Aggregate tables (per-device)
+        public DbSet<AggregateMinuteEnergy> AggregateMinuteEnergies => Set<AggregateMinuteEnergy>();
+        public DbSet<AggregateHourEnergy> AggregateHourEnergies => Set<AggregateHourEnergy>();
+        public DbSet<AggregateDayEnergy> AggregateDayEnergies => Set<AggregateDayEnergy>();
+        public DbSet<AggregateMonthEnergy> AggregateMonthEnergies => Set<AggregateMonthEnergy>();
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<EnergyReading>()
@@ -26,6 +32,72 @@ namespace energy_backend.Data
             modelBuilder.Entity<AggregatedEnergy>()
                 .HasIndex(a => new { a.DeviceId, a.PeriodStartTime })
                 .IsUnique();
+
+            // Indexes for new Per-Device Aggregate tables
+            // Indexes for new Per-Device Aggregate tables
+            // --- AggregateMinuteEnergy ---
+            modelBuilder.Entity<AggregateMinuteEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Organisation>() // Explicitly link to Organisation
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction); // Break the cycle
+            });
+
+            // --- AggregateHourEnergy ---
+            modelBuilder.Entity<AggregateHourEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // --- AggregateDayEnergy ---
+            modelBuilder.Entity<AggregateDayEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // --- AggregateMonthEnergy ---
+            modelBuilder.Entity<AggregateMonthEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
         }
     }
 

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Core.Interfaces;
 using energy_backend.Data;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace energy_backend.Infrastructure.Repositories

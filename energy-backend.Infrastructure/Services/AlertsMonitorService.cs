@@ -1,20 +1,27 @@
 using energy_backend.Core.Entities;
 using energy_backend.Data;
-using energy_backend.RealTime.energy_backend.Application.Realtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using energy_backend.Application.Services;
 
 namespace energy_backend.Infrastructure.Services
 {
 
     public class AlertsMonitorService : BackgroundService
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceProvider _serviceProvider; // Keep for now to get DBContext and Org Data
+        // REMOVED: cannot safely inject scoped service into singleton
+        // private readonly IAlertStreamService _alertStreamService; // Injected
 
-        public AlertsMonitorService(IServiceProvider serviceProvider)
+        public AlertsMonitorService(
+            IServiceProvider serviceProvider // Keep serviceProvider to create scope for DbContext
+                                             // REMOVED: IAlertStreamService alertStreamService
+        )
         {
             _serviceProvider = serviceProvider;
+            // REMOVED assignment
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -22,7 +29,7 @@ namespace energy_backend.Infrastructure.Services
             while (!stoppingToken.IsCancellationRequested)
             {
                 await CheckAlertsAsync(stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); // Keep polling for alert checks for now
             }
         }
 
@@ -32,16 +39,20 @@ namespace energy_backend.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
 
             var db = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
-            var notifier = scope.ServiceProvider.GetRequiredService<IAlertsNotifier>();
+            var alertStream = scope.ServiceProvider.GetRequiredService<IAlertStreamService>();
 
             var alerts = await db.Alerts
                 .Include(a => a.Organisation)
-                    .ThenInclude(o => o.Devices)
                 .ToListAsync(ct);
 
             foreach (var alert in alerts)
             {
-                var energy = alert.Organisation!.Devices.Sum(d => d.EnergyConsumption);
+                var latestMinuteAggregate = await db.AggregateMinuteEnergies
+                    .Where(a => a.OrgId == alert.OrganisationId)
+                    .OrderByDescending(a => a.Timestamp)
+                    .FirstOrDefaultAsync(ct);
+
+                var energy = latestMinuteAggregate?.AverageWatts ?? 0;
 
                 if (energy > alert.Threshold && !alert.IsActive)
                 {
@@ -61,23 +72,13 @@ namespace energy_backend.Infrastructure.Services
 
                     db.AlertEvents.Add(evt);
 
-                    var evtDto = new
-                    {
-                        AlertEventId = evt.AlertEventId,
-                        AlertId = evt.AlertId,
-                        OrganisationId = evt.OrganisationId,
-                        Name = evt.Name,
-                        Threshold = evt.Threshold,
-                        TriggeredEnergy = evt.TriggeredEnergy,
-                        TriggeredAt = evt.TriggeredAt
-                    };
-
-                    await notifier.NotifyAsync(alert.AlertId, evtDto, ct);
+                    await alertStream.NotifyAlertTriggered(alert.OrganisationId, evt);
                 }
-
-                if (energy < alert.Threshold * 0.9f && alert.IsActive)
+                else if (energy < alert.Threshold * 0.9f && alert.IsActive)
                 {
                     alert.IsActive = false;
+
+                    await alertStream.NotifyAlertResolved(alert.OrganisationId, alert);
                 }
             }
 
@@ -85,4 +86,3 @@ namespace energy_backend.Infrastructure.Services
         }
     }
 }
-

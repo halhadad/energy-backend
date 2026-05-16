@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using energy_backend.Core.Common;
 using energy_backend.Core.Entities;
 using energy_backend.Data;
-using energy_backend.Entities;
 using energy_backend.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using energy_backend.Application.Services; // Added for IAggregationCoordinatorService
 
 namespace energy_backend.Infrastructure.Services
 {
@@ -20,11 +20,17 @@ namespace energy_backend.Infrastructure.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<EnergyReadingSimulator> _logger;
         private readonly Random _rng = new Random();
+        // REMOVED: invalid scoped dependency in singleton (was causing crash)
+        // private readonly IAggregationCoordinatorService _aggregationCoordinatorService; // Injected
 
-        public EnergyReadingSimulator(IServiceScopeFactory scopeFactory, ILogger<EnergyReadingSimulator> logger)
+        public EnergyReadingSimulator(
+            IServiceScopeFactory scopeFactory,
+            ILogger<EnergyReadingSimulator> logger)
+        // REMOVED PARAM: IAggregationCoordinatorService aggregationCoordinatorService
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            // REMOVED assignment
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,11 +45,19 @@ namespace energy_backend.Infrastructure.Services
                     using var scope = _scopeFactory.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
 
+                    // IMPORTANT: resolve scoped service inside scope (NOT constructor)
+                    var aggregationCoordinatorService =
+                        scope.ServiceProvider.GetRequiredService<IAggregationCoordinatorService>();
+
                     // 1) Compute this slot (floor to 5s)
                     var nowSlot = TimeSlots.FloorTo5sUtc(DateTime.UtcNow);
 
-                    // 2) Load devices
-                    var devices = await db.Devices.AsNoTracking().Select(d => d.DeviceId).ToListAsync(stoppingToken);
+                    // 2) Load devices with their organizations for OrgId
+                    var devices = await db.Devices
+                                        .Include(d => d.Organisation) // Include Organisation to get OrgId
+                                        .AsNoTracking()
+                                        .ToListAsync(stoppingToken);
+
                     if (devices.Count == 0)
                     {
                         await DelayUntilNextSlot(stoppingToken);
@@ -60,54 +74,33 @@ namespace energy_backend.Infrastructure.Services
                     var existingSet = new HashSet<Guid>(existingForSlot);
 
                     // 4) Create readings only for missing devices
-                    var toInsert = new List<EnergyReading>(capacity: Math.Max(8, devices.Count - existingSet.Count));
-                    foreach (var deviceId in devices)
+                    var newReadings = new List<EnergyReading>();
+                    foreach (var device in devices)
                     {
-                        if (existingSet.Contains(deviceId)) continue;
+                        if (existingSet.Contains(device.DeviceId)) continue;
 
-                        toInsert.Add(new EnergyReading
+                        var newReading = new EnergyReading
                         {
                             EnergyReadingId = Guid.NewGuid(),
-                            DeviceId = deviceId,
+                            DeviceId = device.DeviceId,
                             Timestamp = nowSlot,
-                            EnergyValue = (float)Math.Round(_rng.NextDouble() * 0.02, 5) // ~0.00000..0.02000
-                        });
+                            EnergyValue = (float)Math.Round(_rng.NextDouble() * 0.02, 5), // ~0.00000..0.02000
+                            // Device = device // Attach device to ensure OrgId is available for aggregation
+                        };
+                        newReadings.Add(newReading);
                     }
 
-                    if (toInsert.Count > 0)
+                    if (newReadings.Count > 0)
                     {
-                        await db.EnergyReadings.AddRangeAsync(toInsert, stoppingToken);
+                        await db.EnergyReadings.AddRangeAsync(newReadings, stoppingToken);
                         await db.SaveChangesAsync(stoppingToken);
-                        _logger.LogInformation("Simulator inserted {Count} readings for {Slot}", toInsert.Count, nowSlot);
+                        _logger.LogInformation("Simulator inserted {Count} readings for {Slot}", newReadings.Count, nowSlot);
 
-                        // Summary
-                        foreach (var r in toInsert)
+                        // Process new readings through the aggregation coordinator
+                        foreach (var newReading in newReadings)
                         {
-                            var month = r.Timestamp.Month;
-                            var year = r.Timestamp.Year;
-
-                            var summary = await db.DeviceConsumptionSummaries
-                                .FirstOrDefaultAsync(s => s.DeviceId == r.DeviceId && s.Year == year && s.Month == month, stoppingToken);
-
-                            if (summary == null)
-                            {
-                                summary = new DeviceConsumptionSummary
-                                {
-                                    DeviceConsumptionSummaryId = Guid.NewGuid(),
-                                    DeviceId = r.DeviceId,
-                                    Year = year,
-                                    Month = month,
-                                    TotalConsumption = 0,
-                                    LastUpdated = r.Timestamp
-                                };
-                                db.DeviceConsumptionSummaries.Add(summary);
-                            }
-
-                            summary.TotalConsumption += r.EnergyValue;
-                            summary.LastUpdated = r.Timestamp;
+                            await aggregationCoordinatorService.ProcessEnergyReadingAsync(newReading);
                         }
-                        await db.SaveChangesAsync(stoppingToken);
-
                     }
                 }
                 catch (DbUpdateException ex)

@@ -1,4 +1,4 @@
-﻿namespace energy_backend.Entities
+﻿namespace energy_backend.Core.Entities
 {
     public class User
     {

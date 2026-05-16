@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\energy-backend.Application\energy-backend.Application.csproj" />
+    <ProjectReference Include="..\energy-backend.Core\energy-backend.Domain.csproj" />
     <ProjectReference Include="..\energy-backend.Infrastructure\energy-backend.Infrastructure.csproj" />
   </ItemGroup>
 

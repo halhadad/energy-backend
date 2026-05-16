@@ -2,13 +2,14 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using energy_backend.Data;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using energy_backend.Models;
-using energy_backend.Services;
+using energy_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using energy_backend.Application.Services;
 
 namespace energy_backend.Infrastructure.Services
 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,39 +19,40 @@ namespace energy_backend.Infrastructure.Repositories
     }
         public async Task<Dictionary<string, float>> GetAggregatedByDeviceTypeAsync(Guid organisationId, DateTime start, DateTime end)
         {
-            return await _context.AggregatedEnergies
+            // For device type breakdown, we use the minute aggregates for the highest precision in the requested range
+            return await _context.AggregateMinuteEnergies
                 .Include(a => a.Device)
-                .Where(a => a.Device.OrganisationId == organisationId && a.PeriodStartTime >= start && a.PeriodStartTime < end)
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= start && a.Timestamp < end)
                 .GroupBy(a => a.Device.Type)
-                .Select(g => new { g.Key, Total = g.Sum(x => x.TotalKwh) })
+                .Select(g => new { g.Key, Total = g.Sum(x => x.TotalEnergy) })
                 .ToDictionaryAsync(x => x.Key, x => x.Total);
         }
 
         public async Task<Dictionary<string, float>> GetAggregatedByHourAsync(Guid organisationId, DateTime start, DateTime end)
         {
-            return await _context.AggregatedEnergies
-                .Where(a => a.Device.OrganisationId == organisationId && a.PeriodStartTime >= start && a.PeriodStartTime < end)
-                .GroupBy(a => a.PeriodStartTime.Hour)
+            return await _context.AggregateHourEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= start && a.Timestamp < end)
+                .GroupBy(a => a.Timestamp) // Group by timestamp to sum across all devices for that org
                 .OrderBy(g => g.Key)
-                .Select(g => new { Hour = g.Key, Total = g.Sum(x => x.TotalKwh) })
+                .Select(g => new { Hour = g.Key.Hour, Total = g.Sum(x => x.TotalEnergy) })
                 .ToDictionaryAsync(x => $"{x.Hour}:00", x => x.Total);
         }
 
         public async Task<Dictionary<string, float>> GetAggregatedByDayAsync(Guid organisationId, DateTime start, DateTime end)
         {
-            return await _context.AggregatedEnergies
-                .Where(a => a.Device.OrganisationId == organisationId && a.PeriodStartTime >= start && a.PeriodStartTime < end)
-                .GroupBy(a => a.PeriodStartTime.Date)
+            return await _context.AggregateDayEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= start && a.Timestamp < end)
+                .GroupBy(a => a.Timestamp.Date)
                 .OrderBy(g => g.Key)
-                .Select(g => new { Day = g.Key, Total = g.Sum(x => x.TotalKwh) })
+                .Select(g => new { Day = g.Key, Total = g.Sum(x => x.TotalEnergy) })
                 .ToDictionaryAsync(x => x.Day.ToString("yyyy-MM-dd"), x => x.Total);
         }
 
         public async Task<float> GetTotalConsumptionAsync(Guid organisationId, DateTime start, DateTime end)
         {
-            return await _context.AggregatedEnergies
-                .Where(a => a.Device.OrganisationId == organisationId && a.PeriodStartTime >= start && a.PeriodStartTime < end)
-                .SumAsync(a => a.TotalKwh);
+            return await _context.AggregateMinuteEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= start && a.Timestamp < end)
+                .SumAsync(a => a.TotalEnergy);
         }
     }
 }

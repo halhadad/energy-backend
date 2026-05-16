@@ -21,4 +21,8 @@
     <ProjectReference Include="..\energy-backend.Application\energy-backend.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

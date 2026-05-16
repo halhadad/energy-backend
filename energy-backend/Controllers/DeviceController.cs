@@ -1,8 +1,9 @@
 ﻿using System.Security.Claims;
 using energy_backend.Models;
-using energy_backend.Services;
+using energy_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using energy_backend.Application.Services;
 
 namespace energy_backend.Controllers
 {

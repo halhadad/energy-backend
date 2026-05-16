@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using energy_backend.Application.Models;
 using energy_backend.Application.Services;
 using energy_backend.Core.Interfaces;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using energy_backend.Infrastructure.Repositories;
 
 namespace energy_backend.Infrastructure.Services

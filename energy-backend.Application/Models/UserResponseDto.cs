@@ -1,4 +1,4 @@
-﻿using energy_backend.Entities;
+﻿using energy_backend.Core.Entities;
 
 namespace energy_backend.Models
 {

@@ -1,10 +1,11 @@
 ﻿using energy_backend.Core.Interfaces;
+using energy_backend.Application.Services;
 using energy_backend.Data;
-using energy_backend.Entities;
+using energy_backend.Core.Entities;
 using energy_backend.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace energy_backend.Services
+namespace energy_backend.Infrastructure.Services
 {
     public class DeviceService(IDeviceRepository repository, IOrganisationRepository orgRepo) : IDeviceService
     {

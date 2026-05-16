@@ -7,6 +7,7 @@ using energy_backend.Application.Models.SignalR;
 using energy_backend.Application.Services;
 using energy_backend.Data;
 using Microsoft.EntityFrameworkCore;
+using energy_backend.Core.Entities; // Added for new aggregate entities
 
 namespace energy_backend.Infrastructure.Services
 {
@@ -17,47 +18,67 @@ namespace energy_backend.Infrastructure.Services
             var now = DateTime.UtcNow;
             var startOfToday = now.Date;
             var startOfWeek = now.Date.AddDays(-6);
-            var fiveSecondsAgo = now.AddSeconds(-5);
+            var fiveSecondsAgo = now.AddSeconds(-5); // Still used for current consumption fallback
 
-            // Get readings
-            var readingsToday = await _context.EnergyReadings
+            // --- Pie Charts (Still relying on raw readings for device type grouping) ---
+            var readingsTodayRaw = await _context.EnergyReadings
                 .Include(r => r.Device)
                 .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= startOfToday)
                 .ToListAsync();
 
-            var readingsWeek = await _context.EnergyReadings
+            var readingsWeekRaw = await _context.EnergyReadings
                 .Include(r => r.Device)
                 .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= startOfWeek)
                 .ToListAsync();
 
-            var currentConsumption = await _context.EnergyReadings
-                .Include(r => r.Device)
-                .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= fiveSecondsAgo)
-                .SumAsync(r => r.EnergyValue);
-
-            // Pie chart: sum by device type
-            var pieDay = readingsToday
+            var pieDay = readingsTodayRaw
                 .GroupBy(r => r.Device!.Type)
                 .Select(g => new { Label = g.Key, Value = g.Sum(r => r.EnergyValue) })
                 .ToList();
 
-            var pieWeek = readingsWeek
+            var pieWeek = readingsWeekRaw
                 .GroupBy(r => r.Device!.Type)
                 .Select(g => new { Label = g.Key, Value = g.Sum(r => r.EnergyValue) })
                 .ToList();
 
-            // Line chart: group by hour (day) or day (week)
-            var lineDay = readingsToday
-                .GroupBy(r => r.Timestamp.Hour)
-                .OrderBy(g => g.Key)
-                .Select(g => new { Label = $"{g.Key}:00", Value = g.Sum(r => r.EnergyValue) })
+            // --- Current Consumption (Derived from latest minute aggregate or raw if aggregate not found) ---
+            var currentMinuteStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0, DateTimeKind.Utc);
+            var latestMinuteAggregate = await _context.AggregateMinuteEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp == currentMinuteStart)
+                .FirstOrDefaultAsync();
+            
+            float currentConsumption = latestMinuteAggregate?.AverageWatts ?? 
+                                       await _context.EnergyReadings // Fallback to raw if no aggregate
+                                           .Where(r => r.Device!.OrganisationId == organisationId && r.Timestamp >= fiveSecondsAgo)
+                                           .SumAsync(r => r.EnergyValue);
+
+            // --- Line Charts (Using aggregate tables) ---
+            // Line Chart Day: last 24 hours from AggregateHourEnergy
+            var last24Hours = await _context.AggregateHourEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= now.AddHours(-24) && a.Timestamp < now)
+                .OrderBy(a => a.Timestamp)
+                .ToListAsync();
+
+            var lineDay = last24Hours
+                .Select(a => new { Label = $"{a.Timestamp:HH:mm}", Value = a.TotalEnergy })
                 .ToList();
 
-            var lineWeek = readingsWeek
-                .GroupBy(r => r.Timestamp.Date)
-                .OrderBy(g => g.Key)
-                .Select(g => new { Label = g.Key.ToString("ddd"), Value = g.Sum(r => r.EnergyValue) })
+            // Line Chart Week: last 7 days from AggregateDayEnergy
+            var last7Days = await _context.AggregateDayEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= now.AddDays(-7).Date && a.Timestamp < now.Date)
+                .OrderBy(a => a.Timestamp)
+                .ToListAsync();
+
+            var lineWeek = last7Days
+                .Select(a => new { Label = $"{a.Timestamp:ddd}", Value = a.TotalEnergy })
                 .ToList();
+
+            // --- Stats (Using aggregate tables) ---
+            // TodaysCost: Sum of TotalEnergy from AggregateMinuteEnergy for today
+            var todaysEnergy = await _context.AggregateMinuteEnergies
+                .Where(a => a.OrgId == organisationId && a.Timestamp >= startOfToday && a.Timestamp < now)
+                .SumAsync(a => a.TotalEnergy);
+            float todaysCost = (float)Math.Round(todaysEnergy * 1.92, 2);
 
             // Budget
             var organisation = await _context.Organisations.FindAsync(organisationId);
@@ -88,7 +109,7 @@ namespace energy_backend.Infrastructure.Services
                 Stats = new StatsDto
                 {
                     CurrentConsumption = (float)Math.Round(currentConsumption, 2),
-                    TodaysCost = (float)Math.Round(readingsToday.Sum(x => x.EnergyValue * 1.92), 2),
+                    TodaysCost = todaysCost,
                     MonthlyBudget = energyBudget,
                     CarbonFootprint = (float)Math.Round(currentConsumption * 0.42f, 2)
                 }
