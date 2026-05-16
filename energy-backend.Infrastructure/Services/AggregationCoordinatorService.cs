@@ -29,7 +29,6 @@ namespace energy_backend.Infrastructure.Services
 
         public async Task ProcessEnergyReadingAsync(EnergyReading energyReading)
         {
-            // Ensure OrgId is available
             if (energyReading.Device == null)
             {
                 energyReading.Device = await _context.Devices
@@ -38,180 +37,152 @@ namespace energy_backend.Infrastructure.Services
 
                 if (energyReading.Device == null)
                 {
-                    _logger.LogWarning("Device not found for EnergyReading {EnergyReadingId}.", energyReading.EnergyReadingId);
+                    _logger.LogWarning("Device not found for reading {Id}", energyReading.EnergyReadingId);
                     return;
                 }
             }
 
-            // SAFETY: ensure Organisation exists
             var orgId = energyReading.Device.OrganisationId;
+            if (orgId == Guid.Empty) return;
 
-            if (orgId == Guid.Empty)
+            var ts = energyReading.Timestamp;
+            var value = energyReading.EnergyValue;
+
+            // All four buckets calculated in memory, one SaveChanges at the end
+            await UpsertMinuteAsync(orgId, energyReading.DeviceId, ts, value);
+            await UpsertHourAsync(orgId, energyReading.DeviceId, ts, value);
+            await UpsertDayAsync(orgId, energyReading.DeviceId, ts, value);
+            await UpsertMonthAsync(orgId, energyReading.DeviceId, ts, value);
+
+            await _context.SaveChangesAsync(); //  single roundtrip
+
+            // Notify stream after save
+            var minute = await _context.AggregateMinuteEnergies
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == energyReading.DeviceId
+                    && a.Timestamp == new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc));
+
+            if (minute != null)
+                await _realTimeStreamService.NotifyMinuteAggregateUpdated(orgId, minute);
+        }
+
+        private async Task UpsertMinuteAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
+        {
+            var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc);
+            var agg = await _context.AggregateMinuteEnergies
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == bucket);
+
+            if (agg == null)
             {
-                _logger.LogWarning("OrganisationId missing for Device {DeviceId}", energyReading.DeviceId);
-                return;
-            }
-
-            // Determine the minute bucket timestamp
-            var minuteTimestamp = new DateTime(
-                energyReading.Timestamp.Year,
-                energyReading.Timestamp.Month,
-                energyReading.Timestamp.Day,
-                energyReading.Timestamp.Hour,
-                energyReading.Timestamp.Minute,
-                0,
-                DateTimeKind.Utc); // Ensure UTC
-
-            var aggregate = await _context.AggregateMinuteEnergies
-                .FirstOrDefaultAsync(a =>
-                    a.OrgId == orgId &&
-                    a.DeviceId == energyReading.DeviceId &&
-                    a.Timestamp == minuteTimestamp);
-
-            if (aggregate == null)
-            {
-                aggregate = new AggregateMinuteEnergy
+                _context.AggregateMinuteEnergies.Add(new AggregateMinuteEnergy
                 {
                     OrgId = orgId,
-                    DeviceId = energyReading.DeviceId,
-                    Timestamp = minuteTimestamp,
-                    TotalEnergy = energyReading.EnergyValue,
-                    AverageWatts = energyReading.EnergyValue,
-                    MinWatts = energyReading.EnergyValue,
-                    MaxWatts = energyReading.EnergyValue,
+                    DeviceId = deviceId,
+                    Timestamp = bucket,
+                    TotalEnergy = value,
+                    AverageWatts = value,
+                    MinWatts = value,
+                    MaxWatts = value,
                     DataPointsCount = 1
-                };
-
-                _context.AggregateMinuteEnergies.Add(aggregate);
+                });
             }
             else
             {
-                aggregate.TotalEnergy += energyReading.EnergyValue;
-                aggregate.DataPointsCount++;
-                aggregate.AverageWatts = aggregate.TotalEnergy / aggregate.DataPointsCount;
-
-                if (energyReading.EnergyValue < aggregate.MinWatts)
-                    aggregate.MinWatts = energyReading.EnergyValue;
-
-                if (energyReading.EnergyValue > aggregate.MaxWatts)
-                    aggregate.MaxWatts = energyReading.EnergyValue;
+                agg.TotalEnergy += value;
+                agg.DataPointsCount++;
+                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
+                if (value < agg.MinWatts) agg.MinWatts = value;
+                if (value > agg.MaxWatts) agg.MaxWatts = value;
             }
-
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Updated Minute Aggregate for OrgId {OrgId}, DeviceId {DeviceId} at {Timestamp}",
-                aggregate.OrgId, aggregate.DeviceId, aggregate.Timestamp);
-
-            // Notify RealTimeDataStreamService about the updated minute aggregate
-            await _realTimeStreamService.NotifyMinuteAggregateUpdated(aggregate.OrgId, aggregate);
-
-            // --- Real-time Roll-up to Hour/Day/Month ---
-            await RollUpToHourAsync(orgId, energyReading.DeviceId, energyReading.Timestamp, energyReading.EnergyValue);
-            await RollUpToDayAsync(orgId, energyReading.DeviceId, energyReading.Timestamp, energyReading.EnergyValue);
-            await RollUpToMonthAsync(orgId, energyReading.DeviceId, energyReading.Timestamp, energyReading.EnergyValue);
         }
 
-        private async Task RollUpToHourAsync(Guid orgId, Guid deviceId, DateTime timestamp, float energyValue)
+        private async Task UpsertHourAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
         {
-            var hourTimestamp = new DateTime(timestamp.Year, timestamp.Month, timestamp.Day, timestamp.Hour, 0, 0, DateTimeKind.Utc);
-            var aggregate = await _context.AggregateHourEnergies
-                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == hourTimestamp);
+            var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, 0, 0, DateTimeKind.Utc);
+            var agg = await _context.AggregateHourEnergies
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == bucket);
 
-            if (aggregate == null)
+            if (agg == null)
             {
-                aggregate = new AggregateHourEnergy
+                _context.AggregateHourEnergies.Add(new AggregateHourEnergy
                 {
                     Id = Guid.NewGuid(),
                     OrgId = orgId,
                     DeviceId = deviceId,
-                    Timestamp = hourTimestamp,
-                    TotalEnergy = energyValue,
-                    AverageWatts = energyValue,
-                    MinWatts = energyValue,
-                    MaxWatts = energyValue,
+                    Timestamp = bucket,
+                    TotalEnergy = value,
+                    AverageWatts = value,
+                    MinWatts = value,
+                    MaxWatts = value,
                     DataPointsCount = 1
-                };
-                _context.AggregateHourEnergies.Add(aggregate);
+                });
             }
             else
             {
-                aggregate.TotalEnergy += energyValue;
-                aggregate.DataPointsCount++;
-                aggregate.AverageWatts = aggregate.TotalEnergy / aggregate.DataPointsCount;
-                if (energyValue < aggregate.MinWatts) aggregate.MinWatts = energyValue;
-                if (energyValue > aggregate.MaxWatts) aggregate.MaxWatts = energyValue;
+                agg.TotalEnergy += value; agg.DataPointsCount++;
+                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
+                if (value < agg.MinWatts) agg.MinWatts = value;
+                if (value > agg.MaxWatts) agg.MaxWatts = value;
             }
-            await _context.SaveChangesAsync();
-            await _realTimeStreamService.NotifyHourAggregateUpdated(orgId, aggregate);
         }
 
-        private async Task RollUpToDayAsync(Guid orgId, Guid deviceId, DateTime timestamp, float energyValue)
+        private async Task UpsertDayAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
         {
-            var dayTimestamp = timestamp.Date;
-            var aggregate = await _context.AggregateDayEnergies
-                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == dayTimestamp);
+            var bucket = ts.Date;
+            var agg = await _context.AggregateDayEnergies
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == bucket);
 
-            if (aggregate == null)
+            if (agg == null)
             {
-                aggregate = new AggregateDayEnergy
+                _context.AggregateDayEnergies.Add(new AggregateDayEnergy
                 {
                     Id = Guid.NewGuid(),
                     OrgId = orgId,
                     DeviceId = deviceId,
-                    Timestamp = dayTimestamp,
-                    TotalEnergy = energyValue,
-                    AverageWatts = energyValue,
-                    MinWatts = energyValue,
-                    MaxWatts = energyValue,
+                    Timestamp = bucket,
+                    TotalEnergy = value,
+                    AverageWatts = value,
+                    MinWatts = value,
+                    MaxWatts = value,
                     DataPointsCount = 1
-                };
-                _context.AggregateDayEnergies.Add(aggregate);
+                });
             }
             else
             {
-                aggregate.TotalEnergy += energyValue;
-                aggregate.DataPointsCount++;
-                aggregate.AverageWatts = aggregate.TotalEnergy / aggregate.DataPointsCount;
-                if (energyValue < aggregate.MinWatts) aggregate.MinWatts = energyValue;
-                if (energyValue > aggregate.MaxWatts) aggregate.MaxWatts = energyValue;
+                agg.TotalEnergy += value; agg.DataPointsCount++;
+                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
+                if (value < agg.MinWatts) agg.MinWatts = value;
+                if (value > agg.MaxWatts) agg.MaxWatts = value;
             }
-            await _context.SaveChangesAsync();
-            await _realTimeStreamService.NotifyDayAggregateUpdated(orgId, aggregate);
         }
 
-        private async Task RollUpToMonthAsync(Guid orgId, Guid deviceId, DateTime timestamp, float energyValue)
+        private async Task UpsertMonthAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
         {
-            var monthTimestamp = new DateTime(timestamp.Year, timestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var aggregate = await _context.AggregateMonthEnergies
-                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == monthTimestamp);
+            var bucket = new DateTime(ts.Year, ts.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var agg = await _context.AggregateMonthEnergies
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == bucket);
 
-            if (aggregate == null)
+            if (agg == null)
             {
-                aggregate = new AggregateMonthEnergy
+                _context.AggregateMonthEnergies.Add(new AggregateMonthEnergy
                 {
                     Id = Guid.NewGuid(),
                     OrgId = orgId,
                     DeviceId = deviceId,
-                    Timestamp = monthTimestamp,
-                    TotalEnergy = energyValue,
-                    AverageWatts = energyValue,
-                    MinWatts = energyValue,
-                    MaxWatts = energyValue,
+                    Timestamp = bucket,
+                    TotalEnergy = value,
+                    AverageWatts = value,
+                    MinWatts = value,
+                    MaxWatts = value,
                     DataPointsCount = 1
-                };
-                _context.AggregateMonthEnergies.Add(aggregate);
+                });
             }
             else
             {
-                aggregate.TotalEnergy += energyValue;
-                aggregate.DataPointsCount++;
-                aggregate.AverageWatts = aggregate.TotalEnergy / aggregate.DataPointsCount;
-                if (energyValue < aggregate.MinWatts) aggregate.MinWatts = energyValue;
-                if (energyValue > aggregate.MaxWatts) aggregate.MaxWatts = energyValue;
+                agg.TotalEnergy += value; agg.DataPointsCount++;
+                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
+                if (value < agg.MinWatts) agg.MinWatts = value;
+                if (value > agg.MaxWatts) agg.MaxWatts = value;
             }
-            await _context.SaveChangesAsync();
-            await _realTimeStreamService.NotifyMonthAggregateUpdated(orgId, aggregate);
         }
     }
 }

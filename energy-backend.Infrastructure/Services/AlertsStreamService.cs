@@ -9,21 +9,22 @@ using Microsoft.Extensions.Logging;
 
 namespace energy_backend.Infrastructure.Services // This is in the API layer
 {
-    public class AlertsStreamService : IAlertStreamService // Renamed from AlertStreamService
+    // energy-backend.Infrastructure/Services/AlertsStreamService.cs
+    // Remove IAlertQueryService entirely — it was deleted
+
+    public class AlertsStreamService : IAlertStreamService
     {
         private readonly IHubNotificationService _hubNotificationService;
-        private readonly IAlertQueryService _alertQueryService; // Injected for data query
         private readonly ILogger<AlertsStreamService> _logger;
 
         public AlertsStreamService(
             IHubNotificationService hubNotificationService,
-            IAlertQueryService alertQueryService,
             ILogger<AlertsStreamService> logger)
         {
             _hubNotificationService = hubNotificationService;
-            _alertQueryService = alertQueryService;
             _logger = logger;
         }
+
 
         public async Task SubscribeToAlerts(string connectionId, Guid orgId)
         {
