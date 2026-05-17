@@ -23,14 +23,8 @@ namespace energy_backend.Infrastructure.Services
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                try
-                {
-                    await CheckAlertsAsync(stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "AlertsMonitorService error during check cycle");
-                }
+                try { await CheckAlertsAsync(stoppingToken); }
+                catch (Exception ex) { _logger.LogError(ex, "AlertsMonitorService error"); }
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
@@ -48,14 +42,23 @@ namespace energy_backend.Infrastructure.Services
             {
                 try
                 {
-                    var latestMinute = await db.AggregateMinuteEnergies
+                    // Get the latest minute timestamp for this org, then SUM
+                    // AverageWatts across all devices at that timestamp.
+                    // The old code used FirstOrDefaultAsync — returning only one
+                    // device's row and ignoring the rest of the organisation.
+                    var latestTs = await db.AggregateMinuteEnergies
                         .Where(a => a.OrgId == alert.OrganisationId)
-                        .OrderByDescending(a => a.Timestamp)
-                        .FirstOrDefaultAsync(ct);
+                        .MaxAsync(a => (DateTime?)a.Timestamp, ct);
 
-                    var energy = latestMinute?.AverageWatts ?? 0;
+                    float totalWatts = 0f;
+                    if (latestTs.HasValue)
+                    {
+                        totalWatts = await db.AggregateMinuteEnergies
+                            .Where(a => a.OrgId == alert.OrganisationId && a.Timestamp == latestTs.Value)
+                            .SumAsync(a => a.AverageWatts, ct);
+                    }
 
-                    if (energy > alert.Threshold && !alert.IsActive)
+                    if (totalWatts > alert.Threshold && !alert.IsActive)
                     {
                         alert.IsActive = true;
                         alert.LastTriggeredAt = DateTime.UtcNow;
@@ -67,7 +70,7 @@ namespace energy_backend.Infrastructure.Services
                             OrganisationId = alert.OrganisationId,
                             Name = alert.Name,
                             Threshold = alert.Threshold,
-                            TriggeredEnergy = energy,
+                            TriggeredEnergy = totalWatts,
                             TriggeredAt = DateTime.UtcNow
                         };
 
@@ -75,16 +78,16 @@ namespace energy_backend.Infrastructure.Services
                         await db.SaveChangesAsync(ct);
                         await alertStream.NotifyAlertTriggered(alert.OrganisationId, evt);
 
-                        _logger.LogInformation("Alert {Name} triggered for org {OrgId} at {Energy}W",
-                            alert.Name, alert.OrganisationId, energy);
+                        _logger.LogInformation("Alert '{Name}' triggered at {W:F1} W (threshold {T:F1} W)",
+                            alert.Name, totalWatts, alert.Threshold);
                     }
-                    else if (energy < alert.Threshold * 0.9f && alert.IsActive)
+                    else if (totalWatts < alert.Threshold * 0.9f && alert.IsActive)
                     {
                         alert.IsActive = false;
                         await db.SaveChangesAsync(ct);
                         await alertStream.NotifyAlertResolved(alert.OrganisationId, alert);
 
-                        _logger.LogInformation("Alert {Name} resolved for org {OrgId}", alert.Name, alert.OrganisationId);
+                        _logger.LogInformation("Alert '{Name}' resolved", alert.Name);
                     }
                 }
                 catch (Exception ex)

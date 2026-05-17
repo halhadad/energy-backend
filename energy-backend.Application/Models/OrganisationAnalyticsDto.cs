@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using energy_backend.Application.Models.SignalR;
+﻿using energy_backend.Application.Models.SignalR;
 
 namespace energy_backend.Application.Models
 {
@@ -21,9 +16,16 @@ namespace energy_backend.Application.Models
         public TimeSeriesDto CarbonChartDay { get; set; } = new();
         public TimeSeriesDto CarbonChartWeek { get; set; } = new();
         public TimeSeriesDto CarbonChartMonth { get; set; } = new();
-        // so-far metrics for the month
-        public float Consumption { get; set; }
-        public float Cost { get; set; }
-        public float Carbon { get; set; }
+
+        // Live current power in Watts (from latest minute aggregate summed across all devices)
+        public float CurrentWatts { get; set; }
+
+        // Month-to-date totals
+        public float Consumption { get; set; }   // kWh this month
+        public float Cost { get; set; }           // $ this month
+        public float Carbon { get; set; }         // kg CO₂ this month
+
+        // From Organisation.EnergyBudget
+        public float EnergyBudget { get; set; }
     }
 }

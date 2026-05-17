@@ -1,33 +1,55 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using energy_backend.Application.Services;
 using energy_backend.Core.Entities;
 using energy_backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using energy_backend.Core.Interfaces;
 
 namespace energy_backend.Infrastructure.Services
 {
+    /// <summary>
+    /// Receives a raw EnergyReading where EnergyValue = instantaneous Watts,
+    /// and upserts minute/hour/day/month aggregate buckets.
+    ///
+    /// Watts to kWh conversion for bucket TotalEnergy:
+    ///   kWh = W × (5 seconds / 3600 seconds per hour) / 1000 W per kW
+    ///       = W × 5 / 3,600,000
+    ///
+    /// AverageWatts in each bucket is the rolling mean of all readings in that
+    /// window — this is the value shown on the "Current Consumption" card.
+    /// </summary>
     public class AggregationCoordinatorService : IAggregationCoordinatorService
     {
         private readonly EnergyDbContext _context;
         private readonly ILogger<AggregationCoordinatorService> _logger;
-        private readonly IRealTimeDataStreamService _realTimeStreamService; // Injected service for chart streaming
-        // private readonly IEventPublisher _eventPublisher; // Placeholder for event publishing
+        private readonly IRealTimeDataStreamService _realTimeStreamService;
+
+        private const float SecondsPerReading = 5f;
 
         public AggregationCoordinatorService(
             EnergyDbContext context,
             ILogger<AggregationCoordinatorService> logger,
-            IRealTimeDataStreamService realTimeStreamService) // Injected
+            IRealTimeDataStreamService realTimeStreamService)
         {
             _context = context;
             _logger = logger;
             _realTimeStreamService = realTimeStreamService;
         }
 
+        /// <summary>
+        /// Convenience: upsert buckets + fire SignalR in one call.
+        /// Fine for single-device scenarios. For multi-device batches, prefer
+        /// UpsertBucketsAsync in a loop then NotifyOrgAsync once.
+        /// </summary>
         public async Task ProcessEnergyReadingAsync(EnergyReading energyReading)
+        {
+            await UpsertBucketsAsync(energyReading);
+            await NotifyOrgAsync(energyReading.DeviceId, energyReading.Timestamp);
+        }
+
+        /// <summary>
+        /// Upserts all aggregate buckets for one reading. No SignalR fired here.
+        /// </summary>
+        public async Task UpsertBucketsAsync(EnergyReading energyReading)
         {
             if (energyReading.Device == null)
             {
@@ -46,26 +68,56 @@ namespace energy_backend.Infrastructure.Services
             if (orgId == Guid.Empty) return;
 
             var ts = energyReading.Timestamp;
-            var value = energyReading.EnergyValue;
 
-            // All four buckets calculated in memory, one SaveChanges at the end
-            await UpsertMinuteAsync(orgId, energyReading.DeviceId, ts, value);
-            await UpsertHourAsync(orgId, energyReading.DeviceId, ts, value);
-            await UpsertDayAsync(orgId, energyReading.DeviceId, ts, value);
-            await UpsertMonthAsync(orgId, energyReading.DeviceId, ts, value);
+            // EnergyValue is now WATTS (instantaneous active power).
+            float instantWatts = energyReading.EnergyValue;
 
-            await _context.SaveChangesAsync(); //  single roundtrip
+            // Convert to kWh for the 5-second window:
+            //   kWh = W × (5s / 3600s/h) / 1000
+            //       = W × 5 / 3,600,000
+            // Example: 20 W to 20 × 5 / 3,600,000 = 0.0000278 kWh 
+            float kwhValue = instantWatts * SecondsPerReading / 3_600_000f;
 
-            // Notify stream after save
+            await UpsertMinuteAsync(orgId, energyReading.DeviceId, ts, instantWatts, kwhValue);
+            await UpsertHourAsync(orgId, energyReading.DeviceId, ts, instantWatts, kwhValue);
+            await UpsertDayAsync(orgId, energyReading.DeviceId, ts, instantWatts, kwhValue);
+            await UpsertMonthAsync(orgId, energyReading.DeviceId, ts, instantWatts, kwhValue);
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Queries the org-level sum of AverageWatts for the latest minute bucket
+        /// and fires one SignalR notification. Call once after all devices in a slot
+        /// have been processed via UpsertBucketsAsync.
+        /// </summary>
+        public async Task NotifyOrgAsync(Guid deviceId, DateTime ts)
+        {
+            var device = await _context.Devices.FindAsync(deviceId);
+            if (device == null) return;
+            var orgId = device.OrganisationId;
+
+            var minuteBucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc);
+
+            // Grab any device's minute row for this org/bucket to pass into the
+            // notifier (the notifier re-queries the org-level sum internally).
             var minute = await _context.AggregateMinuteEnergies
-                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == energyReading.DeviceId
-                    && a.Timestamp == new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc));
+                .FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == minuteBucket);
 
             if (minute != null)
                 await _realTimeStreamService.NotifyMinuteAggregateUpdated(orgId, minute);
         }
 
-        private async Task UpsertMinuteAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
+        // Upsert helpers 
+        // Each helper maintains:
+        //   TotalEnergy   — cumulative kWh in the bucket window
+        //   AverageWatts  — rolling mean of instantaneous watt readings
+        //   MinWatts      — lowest reading seen in the window
+        //   MaxWatts      — highest reading seen in the window
+        //   DataPointsCount — number of 5-second readings in the window
+
+        private async Task UpsertMinuteAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float instantWatts, float kwhValue)
         {
             var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateMinuteEnergies
@@ -78,24 +130,26 @@ namespace energy_backend.Infrastructure.Services
                     OrgId = orgId,
                     DeviceId = deviceId,
                     Timestamp = bucket,
-                    TotalEnergy = value,
-                    AverageWatts = value,
-                    MinWatts = value,
-                    MaxWatts = value,
+                    TotalEnergy = kwhValue,
+                    AverageWatts = instantWatts,
+                    MinWatts = instantWatts,
+                    MaxWatts = instantWatts,
                     DataPointsCount = 1
                 });
             }
             else
             {
-                agg.TotalEnergy += value;
+                agg.TotalEnergy += kwhValue;
                 agg.DataPointsCount++;
-                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
-                if (value < agg.MinWatts) agg.MinWatts = value;
-                if (value > agg.MaxWatts) agg.MaxWatts = value;
+                // Rolling mean: newAvg = prevAvg + (new - prevAvg) / n
+                agg.AverageWatts += (instantWatts - agg.AverageWatts) / agg.DataPointsCount;
+                if (instantWatts < agg.MinWatts) agg.MinWatts = instantWatts;
+                if (instantWatts > agg.MaxWatts) agg.MaxWatts = instantWatts;
             }
         }
 
-        private async Task UpsertHourAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
+        private async Task UpsertHourAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float instantWatts, float kwhValue)
         {
             var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateHourEnergies
@@ -109,25 +163,27 @@ namespace energy_backend.Infrastructure.Services
                     OrgId = orgId,
                     DeviceId = deviceId,
                     Timestamp = bucket,
-                    TotalEnergy = value,
-                    AverageWatts = value,
-                    MinWatts = value,
-                    MaxWatts = value,
+                    TotalEnergy = kwhValue,
+                    AverageWatts = instantWatts,
+                    MinWatts = instantWatts,
+                    MaxWatts = instantWatts,
                     DataPointsCount = 1
                 });
             }
             else
             {
-                agg.TotalEnergy += value; agg.DataPointsCount++;
-                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
-                if (value < agg.MinWatts) agg.MinWatts = value;
-                if (value > agg.MaxWatts) agg.MaxWatts = value;
+                agg.TotalEnergy += kwhValue;
+                agg.DataPointsCount++;
+                agg.AverageWatts += (instantWatts - agg.AverageWatts) / agg.DataPointsCount;
+                if (instantWatts < agg.MinWatts) agg.MinWatts = instantWatts;
+                if (instantWatts > agg.MaxWatts) agg.MaxWatts = instantWatts;
             }
         }
 
-        private async Task UpsertDayAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
+        private async Task UpsertDayAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float instantWatts, float kwhValue)
         {
-            var bucket = ts.Date;
+            var bucket = new DateTime(ts.Year, ts.Month, ts.Day, 0, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateDayEnergies
                 .FirstOrDefaultAsync(a => a.OrgId == orgId && a.DeviceId == deviceId && a.Timestamp == bucket);
 
@@ -139,23 +195,25 @@ namespace energy_backend.Infrastructure.Services
                     OrgId = orgId,
                     DeviceId = deviceId,
                     Timestamp = bucket,
-                    TotalEnergy = value,
-                    AverageWatts = value,
-                    MinWatts = value,
-                    MaxWatts = value,
+                    TotalEnergy = kwhValue,
+                    AverageWatts = instantWatts,
+                    MinWatts = instantWatts,
+                    MaxWatts = instantWatts,
                     DataPointsCount = 1
                 });
             }
             else
             {
-                agg.TotalEnergy += value; agg.DataPointsCount++;
-                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
-                if (value < agg.MinWatts) agg.MinWatts = value;
-                if (value > agg.MaxWatts) agg.MaxWatts = value;
+                agg.TotalEnergy += kwhValue;
+                agg.DataPointsCount++;
+                agg.AverageWatts += (instantWatts - agg.AverageWatts) / agg.DataPointsCount;
+                if (instantWatts < agg.MinWatts) agg.MinWatts = instantWatts;
+                if (instantWatts > agg.MaxWatts) agg.MaxWatts = instantWatts;
             }
         }
 
-        private async Task UpsertMonthAsync(Guid orgId, Guid deviceId, DateTime ts, float value)
+        private async Task UpsertMonthAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float instantWatts, float kwhValue)
         {
             var bucket = new DateTime(ts.Year, ts.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateMonthEnergies
@@ -169,19 +227,20 @@ namespace energy_backend.Infrastructure.Services
                     OrgId = orgId,
                     DeviceId = deviceId,
                     Timestamp = bucket,
-                    TotalEnergy = value,
-                    AverageWatts = value,
-                    MinWatts = value,
-                    MaxWatts = value,
+                    TotalEnergy = kwhValue,
+                    AverageWatts = instantWatts,
+                    MinWatts = instantWatts,
+                    MaxWatts = instantWatts,
                     DataPointsCount = 1
                 });
             }
             else
             {
-                agg.TotalEnergy += value; agg.DataPointsCount++;
-                agg.AverageWatts = agg.TotalEnergy / agg.DataPointsCount;
-                if (value < agg.MinWatts) agg.MinWatts = value;
-                if (value > agg.MaxWatts) agg.MaxWatts = value;
+                agg.TotalEnergy += kwhValue;
+                agg.DataPointsCount++;
+                agg.AverageWatts += (instantWatts - agg.AverageWatts) / agg.DataPointsCount;
+                if (instantWatts < agg.MinWatts) agg.MinWatts = instantWatts;
+                if (instantWatts > agg.MaxWatts) agg.MaxWatts = instantWatts;
             }
         }
     }
