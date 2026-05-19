@@ -33,7 +33,7 @@ namespace energy_backend.Infrastructure.Services
                 OrganisationId = request.OrganisationId,
                 Name = request.Name,
                 Type = request.Type,
-                EnergyConsumption = request.EnergyConsumption
+                RatedPowerWatts = request.RatedPowerWatts
             };
 
             await repository.AddAsync(device);
@@ -49,7 +49,7 @@ namespace energy_backend.Infrastructure.Services
 
             device.Name = request.Name;
             device.Type = request.Type;
-            device.EnergyConsumption = request.EnergyConsumption;
+            device.RatedPowerWatts = request.RatedPowerWatts;
 
             await repository.SaveChangesAsync();
 
@@ -79,7 +79,7 @@ namespace energy_backend.Infrastructure.Services
             OrganisationId = d.OrganisationId,
             Name = d.Name,
             Type = d.Type,
-            EnergyConsumption = d.EnergyConsumption
+            RatedPowerWatts = d.RatedPowerWatts
         };
     }
 }

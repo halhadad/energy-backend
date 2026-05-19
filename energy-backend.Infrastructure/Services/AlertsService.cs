@@ -17,8 +17,10 @@ namespace energy_backend.Infrastructure.Services
             var alerts = await alertRepo.GetByUserIdAsync(userId);
             return alerts.Select(a =>
             {
-                var energy = a.Organisation!.Devices.Sum(d => d.EnergyConsumption);
-                return MapAlertToDto(a, energy);
+                var currentPower = a.Organisation!.Devices.Any() 
+                    ? a.Organisation.Devices.Count > 0 ? 0f : 0f 
+                    : 0f;
+                return MapAlertToDto(a, currentPower);
             }).ToList();
         }
 
@@ -38,8 +40,8 @@ namespace energy_backend.Infrastructure.Services
             await alertRepo.AddAsync(alert);
             await alertRepo.SaveChangesAsync();
 
-            var energy = organisation.Devices?.Sum(d => d.EnergyConsumption) ?? 0;
-            return MapAlertToDto(alert, energy);
+            var currentPower = organisation.Devices?.Any() == true ? 0f : 0f;
+            return MapAlertToDto(alert, currentPower);
         }
 
         public async Task<bool> DeleteAlertAsync(Guid userId, Guid alertId)
@@ -58,12 +60,12 @@ namespace energy_backend.Infrastructure.Services
                 .ToListAsync();
         }
 
-        private static AlertResponseDto MapAlertToDto(Alert alert, float energy) => new()
+        private static AlertResponseDto MapAlertToDto(Alert alert, float currentPower) => new()
         {
             AlertId = alert.AlertId,
             Name = alert.Name,
             Threshold = alert.Threshold,
-            EnergyConsumption = energy,
+            CurrentPowerWatts = currentPower,
             IsActive = alert.IsActive,
             LastTriggeredAt = alert.LastTriggeredAt
         };

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using energy_backend.Data;
 
@@ -11,9 +12,11 @@ using energy_backend.Data;
 namespace energy_backend.Infrastructure.Migrations
 {
     [DbContext(typeof(EnergyDbContext))]
-    partial class EnergyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260516171032_aggregatefixes")]
+    partial class aggregatefixes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -28,7 +31,7 @@ namespace energy_backend.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("AveragePowerWatts")
+                    b.Property<float>("AverageWatts")
                         .HasColumnType("real");
 
                     b.Property<int>("DataPointsCount")
@@ -37,10 +40,10 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("MaxPowerWatts")
+                    b.Property<float>("MaxWatts")
                         .HasColumnType("real");
 
-                    b.Property<float>("MinPowerWatts")
+                    b.Property<float>("MinWatts")
                         .HasColumnType("real");
 
                     b.Property<Guid>("OrgId")
@@ -49,7 +52,7 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("TotalEnergyKwh")
+                    b.Property<float>("TotalEnergy")
                         .HasColumnType("real");
 
                     b.HasKey("Id");
@@ -68,7 +71,7 @@ namespace energy_backend.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("AveragePowerWatts")
+                    b.Property<float>("AverageWatts")
                         .HasColumnType("real");
 
                     b.Property<int>("DataPointsCount")
@@ -77,10 +80,10 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("MaxPowerWatts")
+                    b.Property<float>("MaxWatts")
                         .HasColumnType("real");
 
-                    b.Property<float>("MinPowerWatts")
+                    b.Property<float>("MinWatts")
                         .HasColumnType("real");
 
                     b.Property<Guid>("OrgId")
@@ -89,7 +92,7 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("TotalEnergyKwh")
+                    b.Property<float>("TotalEnergy")
                         .HasColumnType("real");
 
                     b.HasKey("Id");
@@ -108,7 +111,7 @@ namespace energy_backend.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("AveragePowerWatts")
+                    b.Property<float>("AverageWatts")
                         .HasColumnType("real");
 
                     b.Property<int>("DataPointsCount")
@@ -117,10 +120,10 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("MaxPowerWatts")
+                    b.Property<float>("MaxWatts")
                         .HasColumnType("real");
 
-                    b.Property<float>("MinPowerWatts")
+                    b.Property<float>("MinWatts")
                         .HasColumnType("real");
 
                     b.Property<Guid>("OrgId")
@@ -129,7 +132,7 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("TotalEnergyKwh")
+                    b.Property<float>("TotalEnergy")
                         .HasColumnType("real");
 
                     b.HasKey("Id");
@@ -148,7 +151,7 @@ namespace energy_backend.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("AveragePowerWatts")
+                    b.Property<float>("AverageWatts")
                         .HasColumnType("real");
 
                     b.Property<int>("DataPointsCount")
@@ -157,10 +160,10 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("MaxPowerWatts")
+                    b.Property<float>("MaxWatts")
                         .HasColumnType("real");
 
-                    b.Property<float>("MinPowerWatts")
+                    b.Property<float>("MinWatts")
                         .HasColumnType("real");
 
                     b.Property<Guid>("OrgId")
@@ -169,7 +172,7 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("TotalEnergyKwh")
+                    b.Property<float>("TotalEnergy")
                         .HasColumnType("real");
 
                     b.HasKey("Id");
@@ -272,15 +275,15 @@ namespace energy_backend.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<float>("EnergyConsumption")
+                        .HasColumnType("real");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OrganisationId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<float>("RatedPowerWatts")
-                        .HasColumnType("real");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -349,7 +352,7 @@ namespace energy_backend.Infrastructure.Migrations
                     b.Property<Guid>("DeviceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("PowerWatts")
+                    b.Property<float>("EnergyValue")
                         .HasColumnType("real");
 
                     b.Property<DateTime>("Timestamp")

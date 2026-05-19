@@ -76,10 +76,10 @@ namespace energy_backend.Infrastructure.Services
                         OrgId = g.Key.OrgId,
                         DeviceId = g.Key.DeviceId, // Select DeviceId
                         Timestamp = g.Key.Hour,
-                        TotalEnergy = g.Sum(x => x.TotalEnergy),
-                        AverageWatts = g.Average(x => x.AverageWatts),
-                        MinWatts = g.Min(x => x.MinWatts),
-                        MaxWatts = g.Max(x => x.MaxWatts),
+                        TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
+                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
+                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
+                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
@@ -97,20 +97,20 @@ namespace energy_backend.Infrastructure.Services
                             OrgId = group.OrgId,
                             DeviceId = group.DeviceId, // Set DeviceId
                             Timestamp = group.Timestamp,
-                            TotalEnergy = group.TotalEnergy,
-                            AverageWatts = group.AverageWatts,
-                            MinWatts = group.MinWatts,
-                            MaxWatts = group.MaxWatts,
+                            TotalEnergyKwh = group.TotalEnergyKwh,
+                            AveragePowerWatts = group.AveragePowerWatts,
+                            MinPowerWatts = group.MinPowerWatts,
+                            MaxPowerWatts = group.MaxPowerWatts,
                             DataPointsCount = group.DataPointsCount
                         });
                     }
                     else
                     {
                         // Update existing (e.g., in case of late data arrival or recalculation)
-                        existingHourAggregate.TotalEnergy = group.TotalEnergy;
-                        existingHourAggregate.AverageWatts = group.AverageWatts;
-                        existingHourAggregate.MinWatts = group.MinWatts;
-                        existingHourAggregate.MaxWatts = group.MaxWatts;
+                        existingHourAggregate.TotalEnergyKwh = group.TotalEnergyKwh;
+                        existingHourAggregate.AveragePowerWatts = group.AveragePowerWatts;
+                        existingHourAggregate.MinPowerWatts = group.MinPowerWatts;
+                        existingHourAggregate.MaxPowerWatts = group.MaxPowerWatts;
                         existingHourAggregate.DataPointsCount = group.DataPointsCount;
                     }
                 }
@@ -127,10 +127,10 @@ namespace energy_backend.Infrastructure.Services
                         OrgId = g.Key.OrgId,
                         DeviceId = g.Key.DeviceId, // Select DeviceId
                         Timestamp = g.Key.Day,
-                        TotalEnergy = g.Sum(x => x.TotalEnergy),
-                        AverageWatts = g.Average(x => x.AverageWatts),
-                        MinWatts = g.Min(x => x.MinWatts),
-                        MaxWatts = g.Max(x => x.MaxWatts),
+                        TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
+                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
+                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
+                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
@@ -143,10 +143,10 @@ namespace energy_backend.Infrastructure.Services
                         OrgId = group.OrgId,
                         DeviceId = group.DeviceId, // Set DeviceId
                         Timestamp = group.Timestamp,
-                        TotalEnergy = group.TotalEnergy,
-                        AverageWatts = group.AverageWatts,
-                        MinWatts = group.MinWatts,
-                        MaxWatts = group.MaxWatts,
+                        TotalEnergyKwh = group.TotalEnergyKwh,
+                        AveragePowerWatts = group.AveragePowerWatts,
+                        MinPowerWatts = group.MinPowerWatts,
+                        MaxPowerWatts = group.MaxPowerWatts,
                         DataPointsCount = group.DataPointsCount
                     });
                 }
@@ -164,10 +164,10 @@ namespace energy_backend.Infrastructure.Services
                         OrgId = g.Key.OrgId,
                         DeviceId = g.Key.DeviceId, // Select DeviceId
                         Timestamp = g.Key.Month,
-                        TotalEnergy = g.Sum(x => x.TotalEnergy),
-                        AverageWatts = g.Average(x => x.AverageWatts),
-                        MinWatts = g.Min(x => x.MinWatts),
-                        MaxWatts = g.Max(x => x.MaxWatts),
+                        TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
+                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
+                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
+                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
@@ -180,10 +180,10 @@ namespace energy_backend.Infrastructure.Services
                         OrgId = group.OrgId,
                         DeviceId = group.DeviceId, // Set DeviceId
                         Timestamp = group.Timestamp,
-                        TotalEnergy = group.TotalEnergy,
-                        AverageWatts = group.AverageWatts,
-                        MinWatts = group.MinWatts,
-                        MaxWatts = group.MaxWatts,
+                        TotalEnergyKwh = group.TotalEnergyKwh,
+                        AveragePowerWatts = group.AveragePowerWatts,
+                        MinPowerWatts = group.MinPowerWatts,
+                        MaxPowerWatts = group.MaxPowerWatts,
                         DataPointsCount = group.DataPointsCount
                     });
                 }

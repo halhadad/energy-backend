@@ -1,17 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace energy_backend.Application.Models
 {
     public class AlertResponseDto
     {
         public Guid AlertId { get; set; }
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>Threshold value — see ThresholdUnit for the unit.</summary>
         public float Threshold { get; set; }
-        public float EnergyConsumption { get; set; }
+
+        /// <summary>Always "W" (Watts). Included so the frontend can display the unit.</summary>
+        public string ThresholdUnit { get; set; } = "W";
+
+        public float CurrentPowerWatts { get; set; }
         public bool IsActive { get; set; }
         public DateTime? LastTriggeredAt { get; set; }
     }

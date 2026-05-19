@@ -9,20 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace energy_backend.Infrastructure.Seeding
 {
     /// <summary>
-    /// Seeds historical aggregate tables with realistic data.
+    /// Seeds 7 days of historical aggregate data using realistic watt values
+    /// derived from each device's RatedPowerWatts.
     ///
-    /// Data model: EnergyReading.EnergyValue = instantaneous Watts.
-    /// Aggregate buckets store:
-    ///   AverageWatts — mean power over the window (what the dashboard shows)
-    ///   TotalEnergy  — kWh consumed in the window (for cost/carbon charts)
-    ///
-    /// Seeding skips devices that already have data, so it is safe to run on
-    /// every startup without duplicating records.
+    /// Run on every startup — skips any time ranges already populated so it
+    /// is safe to call repeatedly without duplicating data.
     /// </summary>
     public static class SeedData
     {
-        private const float CostPerKwh = 1.92f;
-
         public static async Task SeedAggregatedEnergyDbAsync(EnergyDbContext context)
         {
             var devices = await context.Devices
@@ -32,18 +26,16 @@ namespace energy_backend.Infrastructure.Seeding
 
             if (!devices.Any()) return;
 
-            var rng = new Random(42); // Fixed seed for reproducible data
+            // Fixed seed for reproducible history across restarts
+            var rng = new Random(42);
             var now = DateTime.UtcNow;
             var sevenDaysAgo = now.AddDays(-7);
 
             foreach (var device in devices)
             {
-                // Use the device's rated power as the simulation baseline.
-                // If not set, pick a sensible random default and keep it stable
-                // for this device throughout the seed run.
-                var ratedW = device.EnergyConsumption > 0
-                    ? device.EnergyConsumption
-                    : (float)(rng.NextDouble() * 480.0 + 20.0);
+                var ratedW = device.RatedPowerWatts > 0
+                    ? device.RatedPowerWatts
+                    : (float)(rng.NextDouble() * 450.0 + 50.0);
 
                 await SeedMinutesAsync(context, device, ratedW, sevenDaysAgo, now, rng);
                 await SeedHoursAsync(context, device, ratedW, sevenDaysAgo, now, rng);
@@ -52,28 +44,26 @@ namespace energy_backend.Infrastructure.Seeding
             }
         }
 
-        // ── Minute aggregates (last 7 days, one row per minute per device) ───
+        // ── Minute buckets ────────────────────────────────────────────────────
 
-        private static async Task SeedMinutesAsync(
-            EnergyDbContext context, Device device, float ratedW,
-            DateTime from, DateTime to, Random rng)
+        private static async Task SeedMinutesAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
         {
-            // Find where we left off so we don't re-seed
-            var lastTs = await context.AggregateMinuteEnergies
+            var lastTs = await ctx.AggregateMinuteEnergies
                 .Where(a => a.DeviceId == device.DeviceId)
                 .MaxAsync(a => (DateTime?)a.Timestamp);
 
             var cursor = lastTs.HasValue
                 ? lastTs.Value.AddMinutes(1)
-                : FloorToMinute(from);
+                : FloorMinute(from);
 
-            var batch = new List<AggregateMinuteEnergy>();
+            var batch = new List<AggregateMinuteEnergy>(2000);
 
             while (cursor < to)
             {
                 var watts = SimulateWatts(ratedW, cursor, rng);
-                // kWh for one minute = W × (60s / 3,600,000)
-                var kwhPerMinute = watts * 60f / 3_600_000f;
+                // kWh for one minute = W × 60s / 3,600,000
+                var kwh = watts * 60f / 3_600_000f;
 
                 batch.Add(new AggregateMinuteEnergy
                 {
@@ -81,43 +71,42 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor,
-                    AverageWatts = watts,
-                    MinWatts = watts * 0.90f,
-                    MaxWatts = watts * 1.10f,
-                    TotalEnergy = kwhPerMinute,
-                    DataPointsCount = 12 // 12 × 5-second readings per minute
+                    AveragePowerWatts = watts,
+                    MinPowerWatts = watts * 0.88f,
+                    MaxPowerWatts = watts * 1.12f,
+                    TotalEnergyKwh = kwh,
+                    DataPointsCount = 12
                 });
 
                 cursor = cursor.AddMinutes(1);
 
                 if (batch.Count >= 2000)
                 {
-                    await context.AggregateMinuteEnergies.AddRangeAsync(batch);
-                    await context.SaveChangesAsync();
+                    await ctx.AggregateMinuteEnergies.AddRangeAsync(batch);
+                    await ctx.SaveChangesAsync();
                     batch.Clear();
                 }
             }
 
             if (batch.Any())
             {
-                await context.AggregateMinuteEnergies.AddRangeAsync(batch);
-                await context.SaveChangesAsync();
+                await ctx.AggregateMinuteEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
             }
         }
 
-        // ── Hour aggregates ──────────────────────────────────────────────────
+        // ── Hour buckets ──────────────────────────────────────────────────────
 
-        private static async Task SeedHoursAsync(
-            EnergyDbContext context, Device device, float ratedW,
-            DateTime from, DateTime to, Random rng)
+        private static async Task SeedHoursAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var lastTs = await context.AggregateHourEnergies
+            var lastTs = await ctx.AggregateHourEnergies
                 .Where(a => a.DeviceId == device.DeviceId)
                 .MaxAsync(a => (DateTime?)a.Timestamp);
 
             var cursor = lastTs.HasValue
                 ? lastTs.Value.AddHours(1)
-                : FloorToHour(from);
+                : FloorHour(from);
 
             var batch = new List<AggregateHourEnergy>();
 
@@ -125,7 +114,7 @@ namespace energy_backend.Infrastructure.Seeding
             {
                 var watts = SimulateWatts(ratedW, cursor, rng);
                 // kWh for one hour = W / 1000
-                var kwhPerHour = watts / 1000f;
+                var kwh = watts / 1000f;
 
                 batch.Add(new AggregateHourEnergy
                 {
@@ -133,11 +122,11 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor,
-                    AverageWatts = watts,
-                    MinWatts = watts * 0.85f,
-                    MaxWatts = watts * 1.15f,
-                    TotalEnergy = kwhPerHour,
-                    DataPointsCount = 720 // 720 × 5-second readings per hour
+                    AveragePowerWatts = watts,
+                    MinPowerWatts = watts * 0.75f,
+                    MaxPowerWatts = watts * 1.25f,
+                    TotalEnergyKwh = kwh,
+                    DataPointsCount = 720
                 });
 
                 cursor = cursor.AddHours(1);
@@ -145,18 +134,17 @@ namespace energy_backend.Infrastructure.Seeding
 
             if (batch.Any())
             {
-                await context.AggregateHourEnergies.AddRangeAsync(batch);
-                await context.SaveChangesAsync();
+                await ctx.AggregateHourEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
             }
         }
 
-        // ── Day aggregates ───────────────────────────────────────────────────
+        // ── Day buckets ───────────────────────────────────────────────────────
 
-        private static async Task SeedDaysAsync(
-            EnergyDbContext context, Device device, float ratedW,
-            DateTime from, DateTime to, Random rng)
+        private static async Task SeedDaysAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var lastTs = await context.AggregateDayEnergies
+            var lastTs = await ctx.AggregateDayEnergies
                 .Where(a => a.DeviceId == device.DeviceId)
                 .MaxAsync(a => (DateTime?)a.Timestamp);
 
@@ -169,8 +157,8 @@ namespace energy_backend.Infrastructure.Seeding
             while (cursor.Date < to.Date)
             {
                 var watts = SimulateWatts(ratedW, cursor, rng);
-                // kWh for one day = W × 24 / 1000
-                var kwhPerDay = watts * 24f / 1000f;
+                // kWh for one day = W × 24h / 1000
+                var kwh = watts * 24f / 1000f;
 
                 batch.Add(new AggregateDayEnergy
                 {
@@ -178,11 +166,11 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor.Date,
-                    AverageWatts = watts,
-                    MinWatts = watts * 0.70f,
-                    MaxWatts = watts * 1.30f,
-                    TotalEnergy = kwhPerDay,
-                    DataPointsCount = 17280 // 17280 × 5-second readings per day
+                    AveragePowerWatts = watts,
+                    MinPowerWatts = watts * 0.60f,
+                    MaxPowerWatts = watts * 1.40f,
+                    TotalEnergyKwh = kwh,
+                    DataPointsCount = 17280
                 });
 
                 cursor = cursor.AddDays(1);
@@ -190,74 +178,75 @@ namespace energy_backend.Infrastructure.Seeding
 
             if (batch.Any())
             {
-                await context.AggregateDayEnergies.AddRangeAsync(batch);
-                await context.SaveChangesAsync();
+                await ctx.AggregateDayEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
             }
         }
 
-        // ── Month aggregate ──────────────────────────────────────────────────
+        // ── Month bucket ──────────────────────────────────────────────────────
 
-        private static async Task SeedMonthAsync(
-            EnergyDbContext context, Device device, float ratedW,
-            DateTime now, Random rng)
+        private static async Task SeedMonthAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime now, Random rng)
         {
             var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            var exists = await context.AggregateMonthEnergies
+            var exists = await ctx.AggregateMonthEnergies
                 .AnyAsync(a => a.DeviceId == device.DeviceId && a.Timestamp == monthStart);
 
             if (exists) return;
 
-            var watts = SimulateWatts(ratedW, monthStart, rng);
+            var watts = SimulateWatts(ratedW, monthStart.AddHours(12), rng); // midday reference
             var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-            var kwhPerMonth = watts * 24f * daysInMonth / 1000f;
+            var kwh = watts * 24f * daysInMonth / 1000f;
 
-            await context.AggregateMonthEnergies.AddAsync(new AggregateMonthEnergy
+            await ctx.AggregateMonthEnergies.AddAsync(new AggregateMonthEnergy
             {
                 Id = Guid.NewGuid(),
                 OrgId = device.OrganisationId,
                 DeviceId = device.DeviceId,
                 Timestamp = monthStart,
-                AverageWatts = watts,
-                MinWatts = watts * 0.60f,
-                MaxWatts = watts * 1.40f,
-                TotalEnergy = kwhPerMonth,
+                AveragePowerWatts = watts,
+                MinPowerWatts = watts * 0.55f,
+                MaxPowerWatts = watts * 1.45f,
+                TotalEnergyKwh = kwh,
                 DataPointsCount = daysInMonth * 17280
             });
 
-            await context.SaveChangesAsync();
+            await ctx.SaveChangesAsync();
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Generates a realistic watt value based on time of day.
-        /// Morning/evening peaks, low overnight — matches real household/office patterns.
-        /// Adds ±15% random jitter.
+        /// Returns a realistic watt value for a device at the given UTC time.
+        /// Anchored to ratedW with time-of-day load factor and ±25% noise.
+        /// Matches the load curve used by EnergyReadingSimulator so seeded
+        /// history is consistent with live readings.
         /// </summary>
-        private static float SimulateWatts(float ratedW, DateTime ts, Random rng)
+        private static float SimulateWatts(float ratedW, DateTime utcTime, Random rng)
         {
-            // Time-of-day load factor: 0.3 overnight, peak 1.0 at 8am and 6pm
-            var hour = ts.Hour;
+            var hour = utcTime.Hour;
             double loadFactor = hour switch
             {
-                >= 0 and < 6 => 0.25,                    // Night — minimal
-                >= 6 and < 9 => 0.6 + (hour - 6) * 0.1, // Morning ramp-up
-                >= 9 and < 17 => 0.75,                   // Business hours
-                >= 17 and < 20 => 0.90,                  // Evening peak
-                >= 20 and < 23 => 0.65,                  // Wind-down
-                _ => 0.30                                 // Late night
+                >= 0 and < 5 => 0.15,
+                >= 5 and < 7 => 0.30 + (hour - 5) * 0.15,
+                >= 7 and < 9 => 0.65 + (hour - 7) * 0.10,
+                >= 9 and < 12 => 0.85,
+                >= 12 and < 14 => 0.75,
+                >= 14 and < 17 => 0.85,
+                >= 17 and < 20 => 1.00,
+                >= 20 and < 22 => 0.80,
+                _ => 0.50
             };
 
-            var jitter = (rng.NextDouble() * 0.30) - 0.15; // ±15%
-            var watts = (float)(ratedW * loadFactor * (1.0 + jitter));
-            return Math.Max(0f, watts);
+            var noise = (rng.NextDouble() * 0.50) - 0.25;
+            return (float)Math.Max(0.0, ratedW * loadFactor * (1.0 + noise));
         }
 
-        private static DateTime FloorToMinute(DateTime dt) =>
-            new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, DateTimeKind.Utc);
+        private static DateTime FloorMinute(DateTime dt) =>
+            new(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, DateTimeKind.Utc);
 
-        private static DateTime FloorToHour(DateTime dt) =>
-            new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Utc);
+        private static DateTime FloorHour(DateTime dt) =>
+            new(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Utc);
     }
 }

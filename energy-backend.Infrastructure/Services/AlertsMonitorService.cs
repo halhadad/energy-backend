@@ -55,7 +55,7 @@ namespace energy_backend.Infrastructure.Services
                     {
                         totalWatts = await db.AggregateMinuteEnergies
                             .Where(a => a.OrgId == alert.OrganisationId && a.Timestamp == latestTs.Value)
-                            .SumAsync(a => a.AverageWatts, ct);
+                            .SumAsync(a => a.AveragePowerWatts, ct);
                     }
 
                     if (totalWatts > alert.Threshold && !alert.IsActive)

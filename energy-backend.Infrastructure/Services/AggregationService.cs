@@ -34,7 +34,7 @@ namespace energy_backend.Infrastructure.Services
                                  && a.Timestamp >= request.StartTime
                                  && a.Timestamp < request.EndTime)
                         .GroupBy(a => a.Timestamp)
-                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergy) })
+                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergyKwh) })
                         .OrderBy(x => x.Timestamp)
                         .ToListAsync();
                     dataPoints = minutes.Select(x => new TimeSeriesDataPoint
@@ -52,7 +52,7 @@ namespace energy_backend.Infrastructure.Services
                                  && a.Timestamp >= request.StartTime
                                  && a.Timestamp < request.EndTime)
                         .GroupBy(a => a.Timestamp)
-                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergy) })
+                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergyKwh) })
                         .OrderBy(x => x.Timestamp)
                         .ToListAsync();
                     dataPoints = hours.Select(x => new TimeSeriesDataPoint
@@ -70,7 +70,7 @@ namespace energy_backend.Infrastructure.Services
                                  && a.Timestamp >= request.StartTime
                                  && a.Timestamp < request.EndTime)
                         .GroupBy(a => a.Timestamp)
-                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergy) })
+                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergyKwh) })
                         .OrderBy(x => x.Timestamp)
                         .ToListAsync();
                     dataPoints = days.Select(x => new TimeSeriesDataPoint
@@ -88,7 +88,7 @@ namespace energy_backend.Infrastructure.Services
                                  && a.Timestamp >= request.StartTime
                                  && a.Timestamp < request.EndTime)
                         .GroupBy(a => a.Timestamp)
-                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergy) })
+                        .Select(g => new { Timestamp = g.Key, Total = g.Sum(x => x.TotalEnergyKwh) })
                         .OrderBy(x => x.Timestamp)
                         .ToListAsync();
                     dataPoints = months.Select(x => new TimeSeriesDataPoint

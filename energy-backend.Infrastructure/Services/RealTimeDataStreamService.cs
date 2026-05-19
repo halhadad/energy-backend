@@ -1,227 +1,197 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using energy_backend.Application.Services; // For IRealTimeDataStreamService, IRealTimeDataQueryService, IHubNotificationService
-using energy_backend.Application.Models.SignalR; // For RealTimeChartDataDto, RealTimeChartBucketDto
-using energy_backend.Core.Entities; // For AggregateMinuteEnergy, AggregateHourEnergy, etc.
+﻿using energy_backend.Application.Models.SignalR;
+using energy_backend.Application.Services;
+using energy_backend.Core.Entities;
 using Microsoft.Extensions.Logging;
 
-// NOTE: This service is now in the API/Presentation layer (energy-backend project)
-// It depends on Application layer interfaces for Hub notifications and data querying.
-
-namespace energy_backend.Infrastructure.Services // This is in the API layer
+namespace energy_backend.Infrastructure.Services
 {
-    public class RealTimeDataStreamService : IRealTimeDataStreamService // Renamed from ChartStreamService
+    public class RealTimeDataStreamService : IRealTimeDataStreamService
     {
-        private readonly IHubNotificationService _hubNotificationService; // Application layer abstraction for Hubs
-        private readonly IRealTimeDataQueryService _realTimeDataQueryService; // Application layer abstraction for data query
+        private readonly IHubNotificationService _hub;
+        private readonly IRealTimeDataQueryService _query;
         private readonly ILogger<RealTimeDataStreamService> _logger;
 
         public RealTimeDataStreamService(
-            IHubNotificationService hubNotificationService,
-            IRealTimeDataQueryService realTimeDataQueryService,
+            IHubNotificationService hub,
+            IRealTimeDataQueryService query,
             ILogger<RealTimeDataStreamService> logger)
         {
-            _hubNotificationService = hubNotificationService;
-            _realTimeDataQueryService = realTimeDataQueryService;
+            _hub = hub;
+            _query = query;
             _logger = logger;
         }
 
         public async Task SubscribeToChart(string connectionId, Guid orgId, string range)
         {
-            if (!IsValidChartRange(range))
+            if (!IsValidRange(range))
             {
-                await _hubNotificationService.SendErrorAsync(connectionId, $"Invalid chart range: {range}");
+                await _hub.SendErrorAsync(connectionId, $"Invalid chart range: {range}");
                 return;
             }
 
-            var groupName = GetChartGroupName(orgId, range);
-            await _hubNotificationService.AddToChartGroupAsync(connectionId, groupName);
+            var groupName = GroupName(orgId, range);
+            await _hub.AddToChartGroupAsync(connectionId, groupName);
+            _logger.LogInformation("Client {ConnId} subscribed to {Group}", connectionId, groupName);
 
-            _logger.LogInformation("Client {ConnectionId} subscribed to chart {GroupName}", connectionId, groupName);
-
-            // MANDATORY CATCH-UP WINDOW (Server-controlled)
+            // ── Catch-up: send recent historical data from the CORRECT table ──
+            // Each range has its own aggregate table. Using the wrong table gives
+            // the client data at the wrong granularity on first connect.
             var now = DateTime.UtcNow;
-            var from = now - TimeSpan.FromMinutes(2); // Safety window: 1 to 2 minutes
+            RealTimeChartDataDto catchUp;
 
-            RealTimeChartDataDto catchUpData = new RealTimeChartDataDto { Range = range };
-
-            // Aggregate from per-device aggregates to organization-level for the catch-up window
             switch (range)
             {
                 case "minute":
-                case "hour": // For hourly chart, catch-up with minute aggregates
-                    catchUpData.Buckets = await _realTimeDataQueryService.GetAggregateMinuteEnergyForOrgAsync(orgId, from, now);
+                    catchUp = new RealTimeChartDataDto
+                    {
+                        Range = range,
+                        Buckets = await _query.GetAggregateMinuteEnergyForOrgAsync(
+                            orgId, now.AddMinutes(-5), now)  // last 5 minutes
+                    };
                     break;
+
+                case "hour":
+                    catchUp = new RealTimeChartDataDto
+                    {
+                        Range = range,
+                        Buckets = await _query.GetAggregateHourEnergyForOrgAsync(
+                            orgId, now.AddHours(-2), now)    // last 2 hours
+                    };
+                    break;
+
                 case "day":
-                case "month": // For daily/monthly charts, catch-up with hour aggregates
-                    catchUpData.Buckets = await _realTimeDataQueryService.GetAggregateHourEnergyForOrgAsync(orgId, from, now);
+                    catchUp = new RealTimeChartDataDto
+                    {
+                        Range = range,
+                        Buckets = await _query.GetAggregateDayEnergyForOrgAsync(
+                            orgId, now.AddDays(-2), now)     // last 2 days
+                    };
+                    break;
+
+                default: // "month"
+                    catchUp = new RealTimeChartDataDto
+                    {
+                        Range = range,
+                        Buckets = await _query.GetAggregateDayEnergyForOrgAsync(
+                            orgId, now.AddDays(-60), now)
+                    };
                     break;
             }
 
-            // Send missed buckets immediately
-            if (catchUpData.Buckets.Any())
+            if (catchUp.Buckets.Any())
             {
-                await _hubNotificationService.SendRealTimeChartCatchUpAsync(connectionId, catchUpData);
-                _logger.LogInformation("Sent {Count} catch-up buckets to {ConnectionId} for chart {Range}", catchUpData.Buckets.Count, connectionId, range);
+                await _hub.SendRealTimeChartCatchUpAsync(connectionId, catchUp);
+                _logger.LogInformation("Sent {Count} catch-up buckets ({Range}) to {ConnId}",
+                    catchUp.Buckets.Count, range, connectionId);
             }
 
-            await SendCurrentBucketUpdate(orgId, range, connectionId);
+            // Also send the single latest bucket so the card updates immediately
+            await SendLatestBucket(connectionId, orgId, range);
         }
 
         public async Task UnsubscribeFromChart(string connectionId, Guid orgId, string range)
         {
-            if (!IsValidChartRange(range))
-            {
-                _logger.LogWarning("Client {ConnectionId} attempted to unsubscribe from invalid chart range: {Range}", connectionId, range);
-                return;
-            }
-
-            var groupName = GetChartGroupName(orgId, range);
-            await _hubNotificationService.RemoveFromChartGroupAsync(connectionId, groupName);
-
-            _logger.LogInformation("Client {ConnectionId} unsubscribed from chart {GroupName}", connectionId, groupName);
+            if (!IsValidRange(range)) return;
+            await _hub.RemoveFromChartGroupAsync(connectionId, GroupName(orgId, range));
         }
 
-        public async Task NotifyMinuteAggregateUpdated(Guid orgId, AggregateMinuteEnergy updatedMinuteAggregate)
+        public async Task NotifyMinuteAggregateUpdated(Guid orgId, AggregateMinuteEnergy _)
         {
-            // Query the current org-level minute aggregate (summing all devices for that minute)
-            var orgMinuteAggregate = await _realTimeDataQueryService.GetLatestAggregateMinuteEnergyForOrgAsync(orgId);
+            // Re-query org-level sum (all devices) rather than using the passed row
+            // which is only one device's bucket.
+            var latest = await _query.GetLatestAggregateMinuteEnergyForOrgAsync(orgId);
+            if (latest == null) return;
 
-            if (orgMinuteAggregate != null)
+            // Notify minute subscribers
+            await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "minute"), new RealTimeChartDataDto
             {
-                // Notify minute chart subscribers
-                var minuteGroupName = GetChartGroupName(orgId, "minute");
-                await _hubNotificationService.SendRealTimeChartUpdateAsync(minuteGroupName, new RealTimeChartDataDto
-                {
-                    Range = "minute",
-                    Buckets = new List<RealTimeChartBucketDto> { orgMinuteAggregate }
-                });
+                Range = "minute",
+                Buckets = new List<RealTimeChartBucketDto> { latest }
+            });
 
-                // For hourly charts, also update the current hour bucket (aggregated)
-                var orgHourAggregate = await _realTimeDataQueryService.GetLatestAggregateHourEnergyForOrgAsync(orgId);
-
-                if (orgHourAggregate != null)
-                {
-                    await _hubNotificationService.SendRealTimeChartUpdateAsync(GetChartGroupName(orgId, "hour"), new RealTimeChartDataDto
-                    {
-                        Range = "hour",
-                        Buckets = new List<RealTimeChartBucketDto> { orgHourAggregate }
-                    });
-                }
-            }
-        }
-
-        public async Task NotifyHourAggregateUpdated(Guid orgId, AggregateHourEnergy updatedHourAggregate)
-        {
-            // Query the current org-level hour aggregate (summing all devices for that hour)
-            var orgHourAggregate = await _realTimeDataQueryService.GetLatestAggregateHourEnergyForOrgAsync(orgId);
-
-            if (orgHourAggregate != null)
+            // Also push the current hour bucket so the day chart updates
+            var latestHour = await _query.GetLatestAggregateHourEnergyForOrgAsync(orgId);
+            if (latestHour != null)
             {
-                // Notify hour chart subscribers
-                var hourGroupName = GetChartGroupName(orgId, "hour");
-                await _hubNotificationService.SendRealTimeChartUpdateAsync(hourGroupName, new RealTimeChartDataDto
+                await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "hour"), new RealTimeChartDataDto
                 {
                     Range = "hour",
-                    Buckets = new List<RealTimeChartBucketDto> { orgHourAggregate }
+                    Buckets = new List<RealTimeChartBucketDto> { latestHour }
                 });
-
-                // For daily charts, also update the current day bucket (aggregated)
-                var orgDayAggregate = await _realTimeDataQueryService.GetLatestAggregateDayEnergyForOrgAsync(orgId);
-
-                if (orgDayAggregate != null)
-                {
-                    await _hubNotificationService.SendRealTimeChartUpdateAsync(GetChartGroupName(orgId, "day"), new RealTimeChartDataDto
-                    {
-                        Range = "day",
-                        Buckets = new List<RealTimeChartBucketDto> { orgDayAggregate }
-                    });
-                }
             }
         }
 
-        public async Task NotifyDayAggregateUpdated(Guid orgId, AggregateDayEnergy updatedDayAggregate)
+        public async Task NotifyHourAggregateUpdated(Guid orgId, AggregateHourEnergy _)
         {
-            // Query the current org-level day aggregate (summing all devices for that day)
-            var orgDayAggregate = await _realTimeDataQueryService.GetLatestAggregateDayEnergyForOrgAsync(orgId);
+            var latest = await _query.GetLatestAggregateHourEnergyForOrgAsync(orgId);
+            if (latest == null) return;
 
-            if (orgDayAggregate != null)
+            await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "hour"), new RealTimeChartDataDto
             {
-                // Notify day chart subscribers
-                var dayGroupName = GetChartGroupName(orgId, "day");
-                await _hubNotificationService.SendRealTimeChartUpdateAsync(dayGroupName, new RealTimeChartDataDto
+                Range = "hour",
+                Buckets = new List<RealTimeChartBucketDto> { latest }
+            });
+
+            var latestDay = await _query.GetLatestAggregateDayEnergyForOrgAsync(orgId);
+            if (latestDay != null)
+            {
+                await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "day"), new RealTimeChartDataDto
                 {
                     Range = "day",
-                    Buckets = new List<RealTimeChartBucketDto> { orgDayAggregate }
-                });
-
-                // For monthly charts, also update the current month bucket (aggregated)
-                var orgMonthAggregate = await _realTimeDataQueryService.GetLatestAggregateMonthEnergyForOrgAsync(orgId);
-
-                if (orgMonthAggregate != null)
-                {
-                    await _hubNotificationService.SendRealTimeChartUpdateAsync(GetChartGroupName(orgId, "month"), new RealTimeChartDataDto
-                    {
-                        Range = "month",
-                        Buckets = new List<RealTimeChartBucketDto> { orgMonthAggregate }
-                    });
-                }
-            }
-        }
-
-        public async Task NotifyMonthAggregateUpdated(Guid orgId, AggregateMonthEnergy updatedMonthAggregate)
-        {
-            // Query the current org-level month aggregate (summing all devices for that month)
-            var orgMonthAggregate = await _realTimeDataQueryService.GetLatestAggregateMonthEnergyForOrgAsync(orgId);
-
-            if (orgMonthAggregate != null)
-            {
-                // Notify month chart subscribers
-                var monthGroupName = GetChartGroupName(orgId, "month");
-                await _hubNotificationService.SendRealTimeChartUpdateAsync(monthGroupName, new RealTimeChartDataDto
-                {
-                    Range = "month",
-                    Buckets = new List<RealTimeChartBucketDto> { orgMonthAggregate }
+                    Buckets = new List<RealTimeChartBucketDto> { latestDay }
                 });
             }
         }
 
-        private async Task SendCurrentBucketUpdate(Guid orgId, string range, string connectionId)
+        public async Task NotifyDayAggregateUpdated(Guid orgId, AggregateDayEnergy _)
         {
-            RealTimeChartBucketDto? currentBucket = null;
+            var latest = await _query.GetLatestAggregateDayEnergyForOrgAsync(orgId);
+            if (latest == null) return;
 
-            switch (range)
+            await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "day"), new RealTimeChartDataDto
             {
-                case "minute":
-                    currentBucket = await _realTimeDataQueryService.GetLatestAggregateMinuteEnergyForOrgAsync(orgId);
-                    break;
-                case "hour":
-                    currentBucket = await _realTimeDataQueryService.GetLatestAggregateHourEnergyForOrgAsync(orgId);
-                    break;
-                case "day":
-                    currentBucket = await _realTimeDataQueryService.GetLatestAggregateDayEnergyForOrgAsync(orgId);
-                    break;
-                case "month":
-                    currentBucket = await _realTimeDataQueryService.GetLatestAggregateMonthEnergyForOrgAsync(orgId);
-                    break;
-            }
+                Range = "day",
+                Buckets = new List<RealTimeChartBucketDto> { latest }
+            });
+        }
 
-            if (currentBucket != null)
+        public async Task NotifyMonthAggregateUpdated(Guid orgId, AggregateMonthEnergy _)
+        {
+            var latest = await _query.GetLatestAggregateMonthEnergyForOrgAsync(orgId);
+            if (latest == null) return;
+
+            await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, "month"), new RealTimeChartDataDto
             {
-                await _hubNotificationService.SendRealTimeChartCatchUpAsync(connectionId, new RealTimeChartDataDto
+                Range = "month",
+                Buckets = new List<RealTimeChartBucketDto> { latest }
+            });
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+
+        private async Task SendLatestBucket(string connectionId, Guid orgId, string range)
+        {
+            RealTimeChartBucketDto? bucket = range switch
+            {
+                "minute" => await _query.GetLatestAggregateMinuteEnergyForOrgAsync(orgId),
+                "hour" => await _query.GetLatestAggregateHourEnergyForOrgAsync(orgId),
+                "day" => await _query.GetLatestAggregateDayEnergyForOrgAsync(orgId),
+                "month" => await _query.GetLatestAggregateMonthEnergyForOrgAsync(orgId),
+                _ => null
+            };
+
+            if (bucket != null)
+            {
+                await _hub.SendRealTimeChartCatchUpAsync(connectionId, new RealTimeChartDataDto
                 {
                     Range = range,
-                    Buckets = new List<RealTimeChartBucketDto> { currentBucket }
+                    Buckets = new List<RealTimeChartBucketDto> { bucket }
                 });
             }
         }
 
-
-        private string GetChartGroupName(Guid orgId, string range) => $"chart:org:{orgId}:{range}";
-
-        private bool IsValidChartRange(string range) =>
-            range == "minute" || range == "hour" || range == "day" || range == "month";
+        private static string GroupName(Guid orgId, string range) => $"chart:org:{orgId}:{range}";
+        private static bool IsValidRange(string range) =>
+            range is "minute" or "hour" or "day" or "month";
     }
 }

@@ -1,4 +1,4 @@
-using energy_backend.Application.Services;
+﻿using energy_backend.Application.Services;
 using energy_backend.Core.Interfaces;
 using energy_backend.Data;
 using energy_backend.Hubs;
@@ -14,7 +14,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS 
+// ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -24,7 +24,7 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-// Core 
+// ── Core ──────────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
@@ -33,7 +33,7 @@ builder.Services.AddDbContext<EnergyDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("energy-backend.Infrastructure")));
 
-// Auth 
+// ── Auth ──────────────────────────────────────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -63,7 +63,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Application Services 
+// ── Application services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganisationService, OrganisationService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
@@ -74,36 +74,37 @@ builder.Services.AddScoped<IRealTimeDataQueryService, RealTimeDataQueryService>(
 builder.Services.AddScoped<IRealTimeDataStreamService, RealTimeDataStreamService>();
 builder.Services.AddScoped<IAlertStreamService, AlertsStreamService>();
 builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
-
-// OrganisationAnalyticsService is used concretely by OrganisationService � keep as scoped concrete
 builder.Services.AddScoped<OrganisationAnalyticsService>();
 
-// Repositories 
+// ── Repositories ──────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IAggregatedEnergyRepository, AggregatedEnergyRepository>();
 builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
 
-// SignalR 
+// ── SignalR ───────────────────────────────────────────────────────────────────
 builder.Services.AddSignalR();
 
-// Background Services 
+// ── Background services ───────────────────────────────────────────────────────
+// NOTE: HistoricalAggregationService has been removed. The AggregationCoordinatorService
+// writes hour/day/month buckets in real-time on every reading, making a separate
+// historical re-aggregation job unnecessary and a source of double-counting bugs.
+//
+// SummaryBackfillService has also been removed — DeviceConsumptionSummary is a
+// legacy table not used by any current query path.
 builder.Services.AddHostedService<EnergyReadingSimulator>();
 builder.Services.AddHostedService<AlertsMonitorService>();
-builder.Services.AddHostedService<HistoricalAggregationService>();
-// SummaryBackfillService runs once on startup � keep if you want the DeviceConsumptionSummary table populated
-// builder.Services.AddHostedService<SummaryBackfillService>();
 
 var app = builder.Build();
 
-// Pipeline 
+// ── Pipeline ──────────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-// Seed on startup (only fills gaps, safe to run repeatedly)
+// Seed historical data on startup (safe to run repeatedly — skips existing records)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
@@ -111,10 +112,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         await SeedData.SeedAggregatedEnergyDbAsync(context);
+        logger.LogInformation("Seed completed.");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Seeding failed");
+        logger.LogError(ex, "Seeding failed.");
     }
 }
 
