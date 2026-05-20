@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using energy_backend.Application.Services; // Added for IHistoricalAggregationService
+﻿using energy_backend.Application.Services;
 using energy_backend.Core.Entities;
 using energy_backend.Data;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +13,9 @@ namespace energy_backend.Infrastructure.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<HistoricalAggregationService> _logger;
 
-        public HistoricalAggregationService(IServiceScopeFactory scopeFactory, ILogger<HistoricalAggregationService> logger)
+        public HistoricalAggregationService(
+            IServiceScopeFactory scopeFactory,
+            ILogger<HistoricalAggregationService> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
@@ -26,30 +23,18 @@ namespace energy_backend.Infrastructure.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Run every hour, starting 1 minute past the hour to ensure previous hour's data is complete
             _logger.LogInformation("Historical Aggregation Service starting.");
             while (!stoppingToken.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;
-                var nextHour = now.AddHours(1).Date.AddHours(now.Hour + 1).AddMinutes(1); // 1 minute past next hour
+                var nextHour = now.AddHours(1).Date.AddHours(now.Hour + 1).AddMinutes(1);
                 var delay = nextHour - now;
+                if (delay.TotalMilliseconds < 0) delay = TimeSpan.FromSeconds(5);
 
-                if (delay.TotalMilliseconds < 0) // Already past the next trigger, run immediately then adjust for next cycle
-                {
-                    delay = TimeSpan.FromSeconds(5); // Small delay to avoid busy loop
-                }
-                
-                try
-                {
-                    await Task.Delay(delay, stoppingToken);
-                }
-                catch (TaskCanceledException)
-                {
-                    break;
-                }
+                try { await Task.Delay(delay, stoppingToken); }
+                catch (TaskCanceledException) { break; }
 
                 if (stoppingToken.IsCancellationRequested) break;
-
                 await RunHistoricalAggregationAsync(stoppingToken);
             }
         }
@@ -62,133 +47,168 @@ namespace energy_backend.Infrastructure.Services
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
 
-                // Get the last completed hour (e.g., if now is 10:35, process 09:00-09:59)
                 var currentHour = DateTime.UtcNow.Date.AddHours(DateTime.UtcNow.Hour);
-                var processUpTo = currentHour; // Process up to the beginning of the current hour
+                var processUpTo = currentHour;
 
-                // Aggregate Minute -> Hour
-                // Find minute aggregates that haven't been processed into hour aggregates yet
-                var unprocessedMinuteAggregates = await context.AggregateMinuteEnergies
+                // ── Minute → Hour ─────────────────────────────────────────────
+                var minuteGroups = await context.AggregateMinuteEnergies
                     .Where(m => m.Timestamp < processUpTo)
-                    .GroupBy(m => new { m.OrgId, m.DeviceId, Hour = new DateTime(m.Timestamp.Year, m.Timestamp.Month, m.Timestamp.Day, m.Timestamp.Hour, 0, 0) }) // Group by DeviceId as well
+                    .GroupBy(m => new
+                    {
+                        m.OrgId,
+                        m.DeviceId,
+                        Hour = new DateTime(m.Timestamp.Year, m.Timestamp.Month, m.Timestamp.Day, m.Timestamp.Hour, 0, 0)
+                    })
                     .Select(g => new
                     {
-                        OrgId = g.Key.OrgId,
-                        DeviceId = g.Key.DeviceId, // Select DeviceId
+                        g.Key.OrgId,
+                        g.Key.DeviceId,
                         Timestamp = g.Key.Hour,
                         TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
-                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
-                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
-                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
+                        AverageActivePowerWatts = g.Average(x => x.AverageActivePowerWatts),
+                        MinActivePowerWatts = g.Min(x => x.MinActivePowerWatts),
+                        MaxActivePowerWatts = g.Max(x => x.MaxActivePowerWatts),
+                        AverageVoltageVolts = g.Average(x => x.AverageVoltageVolts),
+                        AverageCurrentAmps = g.Average(x => x.AverageCurrentAmps),
+                        AveragePowerFactor = g.Average(x => x.AveragePowerFactor),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
 
-                foreach (var group in unprocessedMinuteAggregates)
+                foreach (var g in minuteGroups)
                 {
-                    var existingHourAggregate = await context.AggregateHourEnergies
-                        .FirstOrDefaultAsync(h => h.OrgId == group.OrgId && h.DeviceId == group.DeviceId && h.Timestamp == group.Timestamp, stoppingToken); // Query by DeviceId
+                    var existing = await context.AggregateHourEnergies
+                        .FirstOrDefaultAsync(h =>
+                            h.OrgId == g.OrgId && h.DeviceId == g.DeviceId && h.Timestamp == g.Timestamp,
+                            stoppingToken);
 
-                    if (existingHourAggregate == null)
+                    if (existing == null)
                     {
                         context.AggregateHourEnergies.Add(new AggregateHourEnergy
                         {
                             Id = Guid.NewGuid(),
-                            OrgId = group.OrgId,
-                            DeviceId = group.DeviceId, // Set DeviceId
-                            Timestamp = group.Timestamp,
-                            TotalEnergyKwh = group.TotalEnergyKwh,
-                            AveragePowerWatts = group.AveragePowerWatts,
-                            MinPowerWatts = group.MinPowerWatts,
-                            MaxPowerWatts = group.MaxPowerWatts,
-                            DataPointsCount = group.DataPointsCount
+                            OrgId = g.OrgId,
+                            DeviceId = g.DeviceId,
+                            Timestamp = g.Timestamp,
+                            TotalEnergyKwh = g.TotalEnergyKwh,
+                            AverageActivePowerWatts = g.AverageActivePowerWatts,
+                            MinActivePowerWatts = g.MinActivePowerWatts,
+                            MaxActivePowerWatts = g.MaxActivePowerWatts,
+                            AverageVoltageVolts = g.AverageVoltageVolts,
+                            AverageCurrentAmps = g.AverageCurrentAmps,
+                            AveragePowerFactor = g.AveragePowerFactor,
+                            DataPointsCount = g.DataPointsCount
                         });
                     }
                     else
                     {
-                        // Update existing (e.g., in case of late data arrival or recalculation)
-                        existingHourAggregate.TotalEnergyKwh = group.TotalEnergyKwh;
-                        existingHourAggregate.AveragePowerWatts = group.AveragePowerWatts;
-                        existingHourAggregate.MinPowerWatts = group.MinPowerWatts;
-                        existingHourAggregate.MaxPowerWatts = group.MaxPowerWatts;
-                        existingHourAggregate.DataPointsCount = group.DataPointsCount;
+                        existing.TotalEnergyKwh = g.TotalEnergyKwh;
+                        existing.AverageActivePowerWatts = g.AverageActivePowerWatts;
+                        existing.MinActivePowerWatts = g.MinActivePowerWatts;
+                        existing.MaxActivePowerWatts = g.MaxActivePowerWatts;
+                        existing.AverageVoltageVolts = g.AverageVoltageVolts;
+                        existing.AverageCurrentAmps = g.AverageCurrentAmps;
+                        existing.AveragePowerFactor = g.AveragePowerFactor;
+                        existing.DataPointsCount = g.DataPointsCount;
                     }
                 }
                 await context.SaveChangesAsync(stoppingToken);
-                _logger.LogInformation("Aggregated minute to hour aggregates up to {ProcessUpTo}", processUpTo);
+                _logger.LogInformation("Aggregated minute→hour up to {T}", processUpTo);
 
-                // Aggregate Hour -> Day
-                var unprocessedHourAggregates = await context.AggregateHourEnergies
-                    .Where(h => h.Timestamp < processUpTo.Date && // Only process full days
-                                !context.AggregateDayEnergies.Any(d => d.OrgId == h.OrgId && d.DeviceId == h.DeviceId && d.Timestamp == h.Timestamp.Date)) // Exclude already processed, query by DeviceId
-                    .GroupBy(h => new { h.OrgId, h.DeviceId, Day = h.Timestamp.Date }) // Group by DeviceId as well
+                // ── Hour → Day ────────────────────────────────────────────────
+                var hourGroups = await context.AggregateHourEnergies
+                    .Where(h => h.Timestamp < processUpTo.Date &&
+                                !context.AggregateDayEnergies.Any(d =>
+                                    d.OrgId == h.OrgId && d.DeviceId == h.DeviceId &&
+                                    d.Timestamp == h.Timestamp.Date))
+                    .GroupBy(h => new { h.OrgId, h.DeviceId, Day = h.Timestamp.Date })
                     .Select(g => new
                     {
-                        OrgId = g.Key.OrgId,
-                        DeviceId = g.Key.DeviceId, // Select DeviceId
+                        g.Key.OrgId,
+                        g.Key.DeviceId,
                         Timestamp = g.Key.Day,
                         TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
-                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
-                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
-                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
+                        AverageActivePowerWatts = g.Average(x => x.AverageActivePowerWatts),
+                        MinActivePowerWatts = g.Min(x => x.MinActivePowerWatts),
+                        MaxActivePowerWatts = g.Max(x => x.MaxActivePowerWatts),
+                        AverageVoltageVolts = g.Average(x => x.AverageVoltageVolts),
+                        AverageCurrentAmps = g.Average(x => x.AverageCurrentAmps),
+                        AveragePowerFactor = g.Average(x => x.AveragePowerFactor),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
 
-                foreach (var group in unprocessedHourAggregates)
+                foreach (var g in hourGroups)
                 {
                     context.AggregateDayEnergies.Add(new AggregateDayEnergy
                     {
                         Id = Guid.NewGuid(),
-                        OrgId = group.OrgId,
-                        DeviceId = group.DeviceId, // Set DeviceId
-                        Timestamp = group.Timestamp,
-                        TotalEnergyKwh = group.TotalEnergyKwh,
-                        AveragePowerWatts = group.AveragePowerWatts,
-                        MinPowerWatts = group.MinPowerWatts,
-                        MaxPowerWatts = group.MaxPowerWatts,
-                        DataPointsCount = group.DataPointsCount
+                        OrgId = g.OrgId,
+                        DeviceId = g.DeviceId,
+                        Timestamp = g.Timestamp,
+                        TotalEnergyKwh = g.TotalEnergyKwh,
+                        AverageActivePowerWatts = g.AverageActivePowerWatts,
+                        MinActivePowerWatts = g.MinActivePowerWatts,
+                        MaxActivePowerWatts = g.MaxActivePowerWatts,
+                        AverageVoltageVolts = g.AverageVoltageVolts,
+                        AverageCurrentAmps = g.AverageCurrentAmps,
+                        AveragePowerFactor = g.AveragePowerFactor,
+                        DataPointsCount = g.DataPointsCount
                     });
                 }
                 await context.SaveChangesAsync(stoppingToken);
-                _logger.LogInformation("Aggregated hour to day aggregates up to {ProcessUpTo}", processUpTo.Date);
+                _logger.LogInformation("Aggregated hour→day up to {T}", processUpTo.Date);
 
-                // Aggregate Day -> Month (Run less frequently, e.g., daily for full previous days)
+                // ── Day → Month ───────────────────────────────────────────────
                 var currentDay = DateTime.UtcNow.Date;
-                var unprocessedDayAggregates = await context.AggregateDayEnergies
-                    .Where(d => d.Timestamp < currentDay.Date && // Only process full months
-                                !context.AggregateMonthEnergies.Any(m => m.OrgId == d.OrgId && m.DeviceId == d.DeviceId && m.Timestamp.Year == d.Timestamp.Year && m.Timestamp.Month == d.Timestamp.Month)) // Exclude already processed, query by DeviceId
-                    .GroupBy(d => new { d.OrgId, d.DeviceId, Month = new DateTime(d.Timestamp.Year, d.Timestamp.Month, 1) }) // Group by DeviceId as well
+                var dayGroups = await context.AggregateDayEnergies
+                    .Where(d => d.Timestamp < currentDay &&
+                                !context.AggregateMonthEnergies.Any(m =>
+                                    m.OrgId == d.OrgId && m.DeviceId == d.DeviceId &&
+                                    m.Timestamp.Year == d.Timestamp.Year &&
+                                    m.Timestamp.Month == d.Timestamp.Month))
+                    .GroupBy(d => new
+                    {
+                        d.OrgId,
+                        d.DeviceId,
+                        Month = new DateTime(d.Timestamp.Year, d.Timestamp.Month, 1)
+                    })
                     .Select(g => new
                     {
-                        OrgId = g.Key.OrgId,
-                        DeviceId = g.Key.DeviceId, // Select DeviceId
+                        g.Key.OrgId,
+                        g.Key.DeviceId,
                         Timestamp = g.Key.Month,
                         TotalEnergyKwh = g.Sum(x => x.TotalEnergyKwh),
-                        AveragePowerWatts = g.Average(x => x.AveragePowerWatts),
-                        MinPowerWatts = g.Min(x => x.MinPowerWatts),
-                        MaxPowerWatts = g.Max(x => x.MaxPowerWatts),
+                        AverageActivePowerWatts = g.Average(x => x.AverageActivePowerWatts),
+                        MinActivePowerWatts = g.Min(x => x.MinActivePowerWatts),
+                        MaxActivePowerWatts = g.Max(x => x.MaxActivePowerWatts),
+                        AverageVoltageVolts = g.Average(x => x.AverageVoltageVolts),
+                        AverageCurrentAmps = g.Average(x => x.AverageCurrentAmps),
+                        AveragePowerFactor = g.Average(x => x.AveragePowerFactor),
                         DataPointsCount = g.Sum(x => x.DataPointsCount)
                     })
                     .ToListAsync(stoppingToken);
 
-                foreach (var group in unprocessedDayAggregates)
+                foreach (var g in dayGroups)
                 {
                     context.AggregateMonthEnergies.Add(new AggregateMonthEnergy
                     {
                         Id = Guid.NewGuid(),
-                        OrgId = group.OrgId,
-                        DeviceId = group.DeviceId, // Set DeviceId
-                        Timestamp = group.Timestamp,
-                        TotalEnergyKwh = group.TotalEnergyKwh,
-                        AveragePowerWatts = group.AveragePowerWatts,
-                        MinPowerWatts = group.MinPowerWatts,
-                        MaxPowerWatts = group.MaxPowerWatts,
-                        DataPointsCount = group.DataPointsCount
+                        OrgId = g.OrgId,
+                        DeviceId = g.DeviceId,
+                        Timestamp = g.Timestamp,
+                        TotalEnergyKwh = g.TotalEnergyKwh,
+                        AverageActivePowerWatts = g.AverageActivePowerWatts,
+                        MinActivePowerWatts = g.MinActivePowerWatts,
+                        MaxActivePowerWatts = g.MaxActivePowerWatts,
+                        AverageVoltageVolts = g.AverageVoltageVolts,
+                        AverageCurrentAmps = g.AverageCurrentAmps,
+                        AveragePowerFactor = g.AveragePowerFactor,
+                        DataPointsCount = g.DataPointsCount
                     });
                 }
                 await context.SaveChangesAsync(stoppingToken);
-                _logger.LogInformation("Aggregated day to month aggregates up to {ProcessUpTo}", currentDay.Date);
+                _logger.LogInformation("Aggregated day→month up to {T}", currentDay);
             }
             catch (Exception ex)
             {

@@ -7,14 +7,11 @@ using Microsoft.Extensions.Logging;
 namespace energy_backend.Infrastructure.Services
 {
     /// <summary>
-    /// Receives a raw EnergyReading (PowerWatts = instantaneous active power in W)
-    /// and upserts minute / hour / day / month aggregate buckets.
+    /// Receives a raw EnergyReading and upserts minute/hour/day/month aggregate buckets.
     ///
-    /// Power → Energy conversion for TotalEnergyKwh in each bucket:
-    ///   kWh = W × window_seconds / 3,600,000
-    ///
-    /// AveragePowerWatts uses Welford's online algorithm for numerical stability:
-    ///   newAvg = prevAvg + (newValue − prevAvg) / newCount
+    /// All running averages use Welford's online algorithm for numerical stability.
+    /// Power-to-energy: kWh = W × 5s / 3,600,000
+    /// Current is stored directly from the reading (I = P / V / PF already computed by simulator).
     /// </summary>
     public class AggregationCoordinatorService : IAggregationCoordinatorService
     {
@@ -34,17 +31,14 @@ namespace energy_backend.Infrastructure.Services
             _stream = stream;
         }
 
-        /// <summary>Convenience: upsert + notify in one call.</summary>
         public async Task ProcessEnergyReadingAsync(EnergyReading reading)
         {
             await UpsertBucketsAsync(reading);
             await NotifyOrgAsync(reading.DeviceId, reading.Timestamp);
         }
 
-        /// <summary>Pure DB upsert — no SignalR.</summary>
         public async Task UpsertBucketsAsync(EnergyReading reading)
         {
-            // Resolve device + org if not already loaded
             if (reading.Device == null)
             {
                 reading.Device = await _context.Devices
@@ -53,8 +47,7 @@ namespace energy_backend.Infrastructure.Services
 
                 if (reading.Device == null)
                 {
-                    _logger.LogWarning("Device {DeviceId} not found; skipping reading {ReadingId}",
-                        reading.DeviceId, reading.EnergyReadingId);
+                    _logger.LogWarning("Device {DeviceId} not found; skipping reading.", reading.DeviceId);
                     return;
                 }
             }
@@ -63,23 +56,20 @@ namespace energy_backend.Infrastructure.Services
             if (orgId == Guid.Empty) return;
 
             var ts = reading.Timestamp;
-
-            // PowerWatts is instantaneous active power (W) — exactly what the IoT
-            // device reports. Convert to kWh for the 5-second window:
-            //   kWh = W × 5s / 3,600,000
-            // Example: 100 W to 100 × 5 / 3,600,000 = 0.0001389 kWh 
-            float watts = reading.PowerWatts;
+            float watts = reading.ActivePowerWatts;
+            float volts = reading.VoltageVolts;
+            float amps = reading.CurrentAmps;
+            float pf = reading.PowerFactor;
             float kwhThisReading = watts * ReadingIntervalSeconds / 3_600_000f;
 
-            await UpsertMinuteAsync(orgId, reading.DeviceId, ts, watts, kwhThisReading);
-            await UpsertHourAsync(orgId, reading.DeviceId, ts, watts, kwhThisReading);
-            await UpsertDayAsync(orgId, reading.DeviceId, ts, watts, kwhThisReading);
-            await UpsertMonthAsync(orgId, reading.DeviceId, ts, watts, kwhThisReading);
+            await UpsertMinuteAsync(orgId, reading.DeviceId, ts, watts, volts, amps, pf, kwhThisReading);
+            await UpsertHourAsync(orgId, reading.DeviceId, ts, watts, volts, amps, pf, kwhThisReading);
+            await UpsertDayAsync(orgId, reading.DeviceId, ts, watts, volts, amps, pf, kwhThisReading);
+            await UpsertMonthAsync(orgId, reading.DeviceId, ts, watts, volts, amps, pf, kwhThisReading);
 
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>Fire one SignalR update for the org after all devices are upserted.</summary>
         public async Task NotifyOrgAsync(Guid deviceId, DateTime slotTimestamp)
         {
             var device = await _context.Devices.FindAsync(deviceId);
@@ -89,7 +79,6 @@ namespace energy_backend.Infrastructure.Services
                 slotTimestamp.Year, slotTimestamp.Month, slotTimestamp.Day,
                 slotTimestamp.Hour, slotTimestamp.Minute, 0, DateTimeKind.Utc);
 
-            // Pass any one device's row — the stream service re-queries the org sum internally
             var anyRow = await _context.AggregateMinuteEnergies
                 .FirstOrDefaultAsync(a => a.OrgId == device.OrganisationId && a.Timestamp == minuteBucket);
 
@@ -97,10 +86,10 @@ namespace energy_backend.Infrastructure.Services
                 await _stream.NotifyMinuteAggregateUpdated(device.OrganisationId, anyRow);
         }
 
-        // Upsert helpers 
+        // ── Upsert helpers ────────────────────────────────────────────────────
 
-        private async Task UpsertMinuteAsync(Guid orgId, Guid deviceId,
-            DateTime ts, float watts, float kwh)
+        private async Task UpsertMinuteAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float watts, float volts, float amps, float pf, float kwh)
         {
             var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateMinuteEnergies
@@ -114,9 +103,12 @@ namespace energy_backend.Infrastructure.Services
                     DeviceId = deviceId,
                     Timestamp = bucket,
                     TotalEnergyKwh = kwh,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts,
-                    MaxPowerWatts = watts,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts,
+                    MaxActivePowerWatts = watts,
+                    AverageVoltageVolts = volts,
+                    AverageCurrentAmps = amps,
+                    AveragePowerFactor = pf,
                     DataPointsCount = 1
                 });
             }
@@ -124,14 +116,17 @@ namespace energy_backend.Infrastructure.Services
             {
                 agg.TotalEnergyKwh += kwh;
                 agg.DataPointsCount++;
-                agg.AveragePowerWatts += (watts - agg.AveragePowerWatts) / agg.DataPointsCount;
-                if (watts < agg.MinPowerWatts) agg.MinPowerWatts = watts;
-                if (watts > agg.MaxPowerWatts) agg.MaxPowerWatts = watts;
+                agg.AverageActivePowerWatts += (watts - agg.AverageActivePowerWatts) / agg.DataPointsCount;
+                agg.AverageVoltageVolts += (volts - agg.AverageVoltageVolts) / agg.DataPointsCount;
+                agg.AverageCurrentAmps += (amps - agg.AverageCurrentAmps) / agg.DataPointsCount;
+                agg.AveragePowerFactor += (pf - agg.AveragePowerFactor) / agg.DataPointsCount;
+                if (watts < agg.MinActivePowerWatts) agg.MinActivePowerWatts = watts;
+                if (watts > agg.MaxActivePowerWatts) agg.MaxActivePowerWatts = watts;
             }
         }
 
-        private async Task UpsertHourAsync(Guid orgId, Guid deviceId,
-            DateTime ts, float watts, float kwh)
+        private async Task UpsertHourAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float watts, float volts, float amps, float pf, float kwh)
         {
             var bucket = new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateHourEnergies
@@ -146,9 +141,12 @@ namespace energy_backend.Infrastructure.Services
                     DeviceId = deviceId,
                     Timestamp = bucket,
                     TotalEnergyKwh = kwh,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts,
-                    MaxPowerWatts = watts,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts,
+                    MaxActivePowerWatts = watts,
+                    AverageVoltageVolts = volts,
+                    AverageCurrentAmps = amps,
+                    AveragePowerFactor = pf,
                     DataPointsCount = 1
                 });
             }
@@ -156,14 +154,17 @@ namespace energy_backend.Infrastructure.Services
             {
                 agg.TotalEnergyKwh += kwh;
                 agg.DataPointsCount++;
-                agg.AveragePowerWatts += (watts - agg.AveragePowerWatts) / agg.DataPointsCount;
-                if (watts < agg.MinPowerWatts) agg.MinPowerWatts = watts;
-                if (watts > agg.MaxPowerWatts) agg.MaxPowerWatts = watts;
+                agg.AverageActivePowerWatts += (watts - agg.AverageActivePowerWatts) / agg.DataPointsCount;
+                agg.AverageVoltageVolts += (volts - agg.AverageVoltageVolts) / agg.DataPointsCount;
+                agg.AverageCurrentAmps += (amps - agg.AverageCurrentAmps) / agg.DataPointsCount;
+                agg.AveragePowerFactor += (pf - agg.AveragePowerFactor) / agg.DataPointsCount;
+                if (watts < agg.MinActivePowerWatts) agg.MinActivePowerWatts = watts;
+                if (watts > agg.MaxActivePowerWatts) agg.MaxActivePowerWatts = watts;
             }
         }
 
-        private async Task UpsertDayAsync(Guid orgId, Guid deviceId,
-            DateTime ts, float watts, float kwh)
+        private async Task UpsertDayAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float watts, float volts, float amps, float pf, float kwh)
         {
             var bucket = new DateTime(ts.Year, ts.Month, ts.Day, 0, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateDayEnergies
@@ -178,9 +179,12 @@ namespace energy_backend.Infrastructure.Services
                     DeviceId = deviceId,
                     Timestamp = bucket,
                     TotalEnergyKwh = kwh,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts,
-                    MaxPowerWatts = watts,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts,
+                    MaxActivePowerWatts = watts,
+                    AverageVoltageVolts = volts,
+                    AverageCurrentAmps = amps,
+                    AveragePowerFactor = pf,
                     DataPointsCount = 1
                 });
             }
@@ -188,14 +192,17 @@ namespace energy_backend.Infrastructure.Services
             {
                 agg.TotalEnergyKwh += kwh;
                 agg.DataPointsCount++;
-                agg.AveragePowerWatts += (watts - agg.AveragePowerWatts) / agg.DataPointsCount;
-                if (watts < agg.MinPowerWatts) agg.MinPowerWatts = watts;
-                if (watts > agg.MaxPowerWatts) agg.MaxPowerWatts = watts;
+                agg.AverageActivePowerWatts += (watts - agg.AverageActivePowerWatts) / agg.DataPointsCount;
+                agg.AverageVoltageVolts += (volts - agg.AverageVoltageVolts) / agg.DataPointsCount;
+                agg.AverageCurrentAmps += (amps - agg.AverageCurrentAmps) / agg.DataPointsCount;
+                agg.AveragePowerFactor += (pf - agg.AveragePowerFactor) / agg.DataPointsCount;
+                if (watts < agg.MinActivePowerWatts) agg.MinActivePowerWatts = watts;
+                if (watts > agg.MaxActivePowerWatts) agg.MaxActivePowerWatts = watts;
             }
         }
 
-        private async Task UpsertMonthAsync(Guid orgId, Guid deviceId,
-            DateTime ts, float watts, float kwh)
+        private async Task UpsertMonthAsync(Guid orgId, Guid deviceId, DateTime ts,
+            float watts, float volts, float amps, float pf, float kwh)
         {
             var bucket = new DateTime(ts.Year, ts.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var agg = await _context.AggregateMonthEnergies
@@ -210,9 +217,12 @@ namespace energy_backend.Infrastructure.Services
                     DeviceId = deviceId,
                     Timestamp = bucket,
                     TotalEnergyKwh = kwh,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts,
-                    MaxPowerWatts = watts,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts,
+                    MaxActivePowerWatts = watts,
+                    AverageVoltageVolts = volts,
+                    AverageCurrentAmps = amps,
+                    AveragePowerFactor = pf,
                     DataPointsCount = 1
                 });
             }
@@ -220,10 +230,14 @@ namespace energy_backend.Infrastructure.Services
             {
                 agg.TotalEnergyKwh += kwh;
                 agg.DataPointsCount++;
-                agg.AveragePowerWatts += (watts - agg.AveragePowerWatts) / agg.DataPointsCount;
-                if (watts < agg.MinPowerWatts) agg.MinPowerWatts = watts;
-                if (watts > agg.MaxPowerWatts) agg.MaxPowerWatts = watts;
+                agg.AverageActivePowerWatts += (watts - agg.AverageActivePowerWatts) / agg.DataPointsCount;
+                agg.AverageVoltageVolts += (volts - agg.AverageVoltageVolts) / agg.DataPointsCount;
+                agg.AverageCurrentAmps += (amps - agg.AverageCurrentAmps) / agg.DataPointsCount;
+                agg.AveragePowerFactor += (pf - agg.AveragePowerFactor) / agg.DataPointsCount;
+                if (watts < agg.MinActivePowerWatts) agg.MinActivePowerWatts = watts;
+                if (watts > agg.MaxActivePowerWatts) agg.MaxActivePowerWatts = watts;
             }
         }
-    }
-}
+
+            }
+        }

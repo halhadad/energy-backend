@@ -15,19 +15,24 @@ using energy_backend.Application.Services;
 namespace energy_backend.Infrastructure.Services
 {
     /// <summary>
-    /// Simulates a real IoT power meter (e.g. Shelly 3EM) sending active power
+    /// Simulates a real single-phase IoT power meter (e.g. Shelly 3EM) sending
     /// readings every 5 seconds per device.
     ///
-    /// EnergyReading.PowerWatts = instantaneous active power in Watts.
+    /// Per-reading simulated values:
     ///
-    /// Simulation model:
-    ///   basePower  = device.RatedPowerWatts  (or random 50–500 W if not set)
-    ///   loadFactor = time-of-day curve (0.15 overnight → 1.0 peak)
-    ///   noise      = ±25% random jitter so charts look alive
-    ///   PowerWatts = basePower × loadFactor × (1 + noise)
+    ///   VoltageVolts     — 230 V nominal (EU grid) with ±2% sag/swell noise.
+    ///                      Realistic: EN 50160 allows ±10%, but typical is ±2%.
     ///
-    /// This means the "Current Consumption" card will read close to the sum of
-    /// all devices' RatedPowerWatts during peak hours, with realistic variation.
+    ///   PowerFactor      — device-type-dependent base PF (0.75–0.99) with small
+    ///                      jitter. Resistive loads (heaters) near 1.0; motors and
+    ///                      SMPS devices 0.75–0.90.
+    ///
+    ///   ActivePowerWatts — time-of-day load curve × RatedPowerWatts × noise.
+    ///                      P = V × I × PF, so we derive current from this.
+    ///
+    ///   CurrentAmps      — derived: I = P / (V × PF).
+    ///                      We store it explicitly so the UI can show it without
+    ///                      recomputing.
     /// </summary>
     public class EnergyReadingSimulator : BackgroundService
     {
@@ -38,7 +43,15 @@ namespace energy_backend.Infrastructure.Services
         // Stable base watts per device (= RatedPowerWatts, assigned once).
         private readonly Dictionary<Guid, float> _deviceBaseWatts = new();
 
-        public EnergyReadingSimulator(IServiceScopeFactory scopeFactory, ILogger<EnergyReadingSimulator> logger)
+        // Per-device stable power factor base (assigned once based on device type).
+        private readonly Dictionary<Guid, float> _deviceBasePf = new();
+
+        // EU nominal voltage
+        private const float NominalVoltage = 230f;
+
+        public EnergyReadingSimulator(
+            IServiceScopeFactory scopeFactory,
+            ILogger<EnergyReadingSimulator> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
@@ -81,31 +94,40 @@ namespace energy_backend.Infrastructure.Services
                     {
                         if (existingIds.Contains(device.DeviceId)) continue;
 
-                        // Use RatedPowerWatts as stable base; assign random default if unset
+                        // Stable rated watts (RatedPowerWatts or random default)
                         if (!_deviceBaseWatts.TryGetValue(device.DeviceId, out var baseW))
                         {
+                            baseW = device.RatedPowerWatts > 0
+                                ? device.RatedPowerWatts
+                                : (float)(_rng.NextDouble() * 450.0 + 50.0); // 50–500 W fallback
+
                             if (device.RatedPowerWatts <= 0)
-                            {
-                                baseW = (float)(_rng.NextDouble() * 450.0 + 50.0); // 50–500 W
                                 _logger.LogWarning(
                                     "Device '{Name}' ({Id}) has no RatedPowerWatts; using {W:F0} W",
                                     device.Name, device.DeviceId, baseW);
-                            }
-                            else
-                            {
-                                baseW = device.RatedPowerWatts;
-                            }
+
                             _deviceBaseWatts[device.DeviceId] = baseW;
                         }
 
-                        var watts = SimulateWatts(baseW, nowSlot);
+                        // Stable power factor base per device (assigned by device type)
+                        if (!_deviceBasePf.TryGetValue(device.DeviceId, out var basePf))
+                        {
+                            basePf = BasePowerFactorForDeviceType(device.Type);
+                            _deviceBasePf[device.DeviceId] = basePf;
+                        }
+
+                        var (activePower, voltage, current, pf) =
+                            SimulateReading(baseW, basePf, nowSlot);
 
                         newReadings.Add(new EnergyReading
                         {
                             EnergyReadingId = Guid.NewGuid(),
                             DeviceId = device.DeviceId,
                             Timestamp = nowSlot,
-                            PowerWatts = (float)Math.Round(watts, 2),
+                            ActivePowerWatts = (float)Math.Round(activePower, 2),
+                            VoltageVolts = (float)Math.Round(voltage, 1),
+                            CurrentAmps = (float)Math.Round(current, 3),
+                            PowerFactor = (float)Math.Round(pf, 3),
                         });
                     }
 
@@ -118,9 +140,11 @@ namespace energy_backend.Infrastructure.Services
                     await db.EnergyReadings.AddRangeAsync(newReadings, stoppingToken);
                     await db.SaveChangesAsync(stoppingToken);
 
-                    _logger.LogDebug("Simulator: {Count} readings at {Slot} — watts: {Watts}",
+                    _logger.LogDebug(
+                        "Simulator: {Count} readings at {Slot} — watts: {Watts}",
                         newReadings.Count, nowSlot,
-                        string.Join(", ", newReadings.Select(r => $"{r.PowerWatts:F0}W")));
+                        string.Join(", ", newReadings.Select(r =>
+                            $"{r.ActivePowerWatts:F0}W/{r.VoltageVolts:F0}V/{r.CurrentAmps:F2}A/PF={r.PowerFactor:F2}")));
 
                     // Upsert all devices first, then fire ONE SignalR message per org
                     var byOrg = newReadings
@@ -151,36 +175,76 @@ namespace energy_backend.Infrastructure.Services
         }
 
         /// <summary>
-        /// Simulates realistic instantaneous power for a device at a given time.
+        /// Simulate a complete instantaneous reading for one device at a given UTC time.
         ///
-        /// Time-of-day load curve keeps values anchored close to rated power
-        /// during business/evening hours and drops them overnight — matching
-        /// real household and office consumption patterns.
+        /// Returns (activePowerWatts, voltageVolts, currentAmps, powerFactor).
         ///
-        /// Noise: ±25% uniform jitter so readings look like a real sensor.
+        /// Simulation model:
+        ///   1. Voltage:     230 V ± 2% uniform noise (realistic EU grid sag/swell).
+        ///   2. Active power: ratedW × time-of-day load curve × ±20% noise.
+        ///   3. Power factor: device-type base PF ± 3% jitter.
+        ///   4. Current:     derived as I = P / (V × PF)   [avoids inconsistency].
         /// </summary>
-        private float SimulateWatts(float ratedW, DateTime utcTime)
+        private (float activePower, float voltage, float current, float pf)
+            SimulateReading(float ratedW, float basePf, DateTime utcTime)
         {
+            // 1. Voltage: 230 V ± 2%
+            var voltageNoise = (_rng.NextDouble() * 0.04) - 0.02; // ±2%
+            var voltage = (float)(NominalVoltage * (1.0 + voltageNoise));
+
+            // 2. Active power with time-of-day curve + ±20% noise
             var hour = utcTime.Hour;
             double loadFactor = hour switch
             {
-                >= 0 and < 5 => 0.15,                          // Deep night — almost off
-                >= 5 and < 7 => 0.30 + (hour - 5) * 0.15,     // Early morning ramp
-                >= 7 and < 9 => 0.65 + (hour - 7) * 0.10,     // Morning ramp
-                >= 9 and < 12 => 0.85,                          // Mid-morning
-                >= 12 and < 14 => 0.75,                         // Lunch dip
-                >= 14 and < 17 => 0.85,                         // Afternoon
-                >= 17 and < 20 => 1.00,                         // Evening peak
-                >= 20 and < 22 => 0.80,                         // Wind-down
-                _ => 0.50                                        // Late night
+                >= 0 and < 5 => 0.15,
+                >= 5 and < 7 => 0.30 + (hour - 5) * 0.15,
+                >= 7 and < 9 => 0.65 + (hour - 7) * 0.10,
+                >= 9 and < 12 => 0.85,
+                >= 12 and < 14 => 0.75,
+                >= 14 and < 17 => 0.85,
+                >= 17 and < 20 => 1.00,
+                >= 20 and < 22 => 0.80,
+                _ => 0.50
             };
 
-            // ±25% noise — wide enough to look interesting, narrow enough
-            // that the value stays recognizably close to rated power
-            var noise = (_rng.NextDouble() * 0.50) - 0.25;
-            var watts = ratedW * loadFactor * (1.0 + noise);
+            var powerNoise = (_rng.NextDouble() * 0.40) - 0.20; // ±20%
+            var activePower = (float)Math.Max(0.0, ratedW * loadFactor * (1.0 + powerNoise));
 
-            return (float)Math.Max(0.0, watts);
+            // 3. Power factor: base ± 3% jitter, clamped 0.5–1.0
+            var pfNoise = (_rng.NextDouble() * 0.06) - 0.03;
+            var pf = (float)Math.Clamp(basePf + pfNoise, 0.50, 1.00);
+
+            // 4. Current: I = P / (V × PF), guarded against div-by-zero
+            var current = (voltage > 0 && pf > 0)
+                ? activePower / (voltage * pf)
+                : 0f;
+
+            return (activePower, voltage, current, pf);
+        }
+
+        /// <summary>
+        /// Returns a realistic base power factor for a device type string.
+        /// Resistive loads (heaters, incandescent) → ~1.0.
+        /// Motors, compressors            → ~0.75–0.85.
+        /// SMPS / LED drivers             → ~0.90–0.95.
+        /// Unknown / default              → 0.92 (a reasonable SMPS assumption).
+        /// </summary>
+        private static float BasePowerFactorForDeviceType(string type)
+        {
+            return (type?.ToLowerInvariant() ?? "") switch
+            {
+                var t when t.Contains("heater") || t.Contains("resistive") || t.Contains("oven")
+                    => 0.99f,
+                var t when t.Contains("motor") || t.Contains("pump") || t.Contains("compressor") || t.Contains("hvac")
+                    => 0.80f,
+                var t when t.Contains("led") || t.Contains("light") || t.Contains("lamp")
+                    => 0.90f,
+                var t when t.Contains("server") || t.Contains("computer") || t.Contains("pc")
+                    => 0.95f,
+                var t when t.Contains("fridge") || t.Contains("freezer") || t.Contains("washing")
+                    => 0.82f,
+                _ => 0.92f
+            };
         }
 
         private static async Task DelayUntilNextSlot(CancellationToken ct)

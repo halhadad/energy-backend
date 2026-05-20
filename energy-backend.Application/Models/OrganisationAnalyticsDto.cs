@@ -14,47 +14,42 @@ namespace energy_backend.Application.Models
         public TimeSeriesDto ConsumptionChartWeek { get; set; } = new();
         public TimeSeriesDto ConsumptionChartMonth { get; set; } = new();
 
-        // ── Cost time series (currency per bucket) ───────────────────────────
+        // ── Cost time series (currency per bucket) ────────────────────────────
         public TimeSeriesDto CostChartDay { get; set; } = new();
         public TimeSeriesDto CostChartWeek { get; set; } = new();
         public TimeSeriesDto CostChartMonth { get; set; } = new();
 
-        // ── Carbon time series (kg CO₂ per bucket) ───────────────────────────
-        public TimeSeriesDto CarbonChartDay { get; set; } = new();
-        public TimeSeriesDto CarbonChartWeek { get; set; } = new();
-        public TimeSeriesDto CarbonChartMonth { get; set; } = new();
+        // ── Live snapshot ──────────────────────────────────────────────────────
 
-        // ── Live snapshot ─────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Sum of AveragePowerWatts across all devices for the latest minute
-        /// bucket. This is what the "Current Consumption" card shows.
-        /// </summary>
+        /// <summary>Sum of AverageActivePowerWatts across all devices for the latest minute bucket.</summary>
         public float CurrentPowerWatts { get; set; }
 
-        /// <summary>
-        /// Sum of RatedPowerWatts across all devices in this organisation.
-        /// Used as the midpoint "rated" marker on the consumption progress bar.
-        /// </summary>
+        /// <summary>Average line voltage across all devices for the latest minute bucket.</summary>
+        public float AverageVoltageVolts { get; set; }
+
+        /// <summary>Total current across all devices for the latest minute bucket, in Amperes.</summary>
+        public float TotalCurrentAmps { get; set; }
+
+        /// <summary>Power-weighted average power factor across all devices for the latest minute.</summary>
+        public float AveragePowerFactor { get; set; }
+
+        /// <summary>Sum of RatedPowerWatts across all devices in this organisation.</summary>
         public float TotalRatedPowerWatts { get; set; }
 
-        // ── Month-to-date totals ──────────────────────────────────────────────
+        // ── Month-to-date totals ───────────────────────────────────────────────
 
         /// <summary>Total energy consumed this month, kWh.</summary>
         public float Consumption { get; set; }
 
-        /// <summary>Estimated cost this month in the configured currency.</summary>
+        /// <summary>Estimated cost this month in the user's configured currency.</summary>
         public float Cost { get; set; }
 
-        /// <summary>Estimated carbon emissions this month, kg CO₂.</summary>
-        public float Carbon { get; set; }
+        // ── Organisation settings ──────────────────────────────────────────────
 
-        // ── Organisation settings ─────────────────────────────────────────────
-
-        /// <summary>
-        /// Power budget in Watts set by the user on the Organisation.
-        /// Used as the upper bound of the consumption progress bar.
-        /// </summary>
+        /// <summary>Power budget in Watts set by the user on the Organisation.</summary>
         public float EnergyBudget { get; set; }
+
+        /// <summary>User's configured electricity rate (cost per kWh).</summary>
+        public float ElectricityCostPerKwh { get; set; }
     }
 }

@@ -17,17 +17,15 @@ namespace energy_backend.Core.Entities
         /// <summary>UTC first-of-month start of the month bucket.</summary>
         public DateTime Timestamp { get; set; }
 
-        /// <summary>Total energy consumed in this month, in kWh.</summary>
         public float TotalEnergyKwh { get; set; }
 
-        /// <summary>Mean active power over this month, in Watts.</summary>
-        public float AveragePowerWatts { get; set; }
+        public float AverageActivePowerWatts { get; set; }
+        public float MinActivePowerWatts { get; set; }
+        public float MaxActivePowerWatts { get; set; }
 
-        /// <summary>Lowest instantaneous reading in this month, in Watts.</summary>
-        public float MinPowerWatts { get; set; }
-
-        /// <summary>Highest instantaneous reading in this month, in Watts.</summary>
-        public float MaxPowerWatts { get; set; }
+        public float AverageVoltageVolts { get; set; }
+        public float AverageCurrentAmps { get; set; }
+        public float AveragePowerFactor { get; set; }
 
         public int DataPointsCount { get; set; }
 

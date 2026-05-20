@@ -3,7 +3,6 @@ using energy_backend.Application.Models.SignalR;
 using energy_backend.Core.Interfaces;
 using energy_backend.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace energy_backend.Infrastructure.Services
 {
@@ -11,21 +10,13 @@ namespace energy_backend.Infrastructure.Services
     {
         private readonly IAggregatedEnergyRepository _repository;
         private readonly EnergyDbContext _context;
-        private readonly float _costPerKwh;
-        private readonly float _carbonKgPerKwh;
 
         public OrganisationAnalyticsService(
             IAggregatedEnergyRepository repository,
-            EnergyDbContext context,
-            IConfiguration configuration)
+            EnergyDbContext context)
         {
             _repository = repository;
             _context = context;
-
-            // Read from appsettings.json → EnergySettings section.
-            // Defaults: $0.28/kWh (global average), 0.233 kg CO₂/kWh (IEA 2023 world avg).
-            _costPerKwh = configuration.GetValue<float>("EnergySettings:CostPerKwh", 0.28f);
-            _carbonKgPerKwh = configuration.GetValue<float>("EnergySettings:CarbonKgPerKwh", 0.233f);
         }
 
         public async Task<OrganisationAnalyticsDto> GetOrganisationAnalyticsAsync(Guid organisationId)
@@ -36,61 +27,73 @@ namespace energy_backend.Infrastructure.Services
             var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var endOfMonth = startOfMonth.AddMonths(1);
 
-            var dto = new OrganisationAnalyticsDto();
+            // ── Resolve user's electricity cost rate ──────────────────────────
+            var org = await _context.Organisations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.OrganisationId == organisationId);
 
-            // ── Pie charts (device type breakdown) ────────────────────────────
-            dto.PieChartDay = BuildBreakdown(
-                await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfToday, now));
-            dto.PieChartWeek = BuildBreakdown(
-                await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfWeek, now));
-            dto.PieChartMonth = BuildBreakdown(
-                await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfMonth, endOfMonth));
+            float costPerKwh = 0.28f;
+            if (org != null)
+            {
+                var setting = await _context.Settings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.UserId == org.UserId);
+                if (setting != null)
+                    costPerKwh = setting.ElectricityCostPerKwh;
+            }
 
-            // ── Time series charts ─────────────────────────────────────────────
-            dto.ConsumptionChartDay = BuildTimeSeries(
-                await _repository.GetAggregatedByHourAsync(organisationId, startOfToday, now));
-            dto.ConsumptionChartWeek = BuildTimeSeries(
-                await _repository.GetAggregatedByDayAsync(organisationId, startOfWeek, now));
-            dto.ConsumptionChartMonth = BuildTimeSeries(
-                await _repository.GetAggregatedByDayAsync(organisationId, startOfMonth, endOfMonth));
+            var dto = new OrganisationAnalyticsDto
+            {
+                ElectricityCostPerKwh = costPerKwh
+            };
 
-            dto.CostChartDay = ScaleTimeSeries(dto.ConsumptionChartDay, _costPerKwh);
-            dto.CostChartWeek = ScaleTimeSeries(dto.ConsumptionChartWeek, _costPerKwh);
-            dto.CostChartMonth = ScaleTimeSeries(dto.ConsumptionChartMonth, _costPerKwh);
+            // ── Pie charts ────────────────────────────────────────────────────
+            dto.PieChartDay = BuildBreakdown(await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfToday, now));
+            dto.PieChartWeek = BuildBreakdown(await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfWeek, now));
+            dto.PieChartMonth = BuildBreakdown(await _repository.GetAggregatedByDeviceTypeAsync(organisationId, startOfMonth, endOfMonth));
 
-            dto.CarbonChartDay = ScaleTimeSeries(dto.ConsumptionChartDay, _carbonKgPerKwh);
-            dto.CarbonChartWeek = ScaleTimeSeries(dto.ConsumptionChartWeek, _carbonKgPerKwh);
-            dto.CarbonChartMonth = ScaleTimeSeries(dto.ConsumptionChartMonth, _carbonKgPerKwh);
+            // ── Consumption time series ───────────────────────────────────────
+            dto.ConsumptionChartDay = BuildTimeSeries(await _repository.GetAggregatedByHourAsync(organisationId, startOfToday, now));
+            dto.ConsumptionChartWeek = BuildTimeSeries(await _repository.GetAggregatedByDayAsync(organisationId, startOfWeek, now));
+            dto.ConsumptionChartMonth = BuildTimeSeries(await _repository.GetAggregatedByDayAsync(organisationId, startOfMonth, endOfMonth));
 
-            // ── Current live power ─────────────────────────────────────────────
-            // Sum AveragePowerWatts across all devices for the latest minute bucket.
+            // ── Cost time series ──────────────────────────────────────────────
+            dto.CostChartDay = ScaleTimeSeries(dto.ConsumptionChartDay, costPerKwh);
+            dto.CostChartWeek = ScaleTimeSeries(dto.ConsumptionChartWeek, costPerKwh);
+            dto.CostChartMonth = ScaleTimeSeries(dto.ConsumptionChartMonth, costPerKwh);
+
+            // ── Live snapshot — latest minute bucket ──────────────────────────
             var latestTs = await _context.AggregateMinuteEnergies
                 .Where(a => a.OrgId == organisationId)
                 .MaxAsync(a => (DateTime?)a.Timestamp);
 
             if (latestTs.HasValue)
             {
-                dto.CurrentPowerWatts = await _context.AggregateMinuteEnergies
+                var latestRows = await _context.AggregateMinuteEnergies
                     .Where(a => a.OrgId == organisationId && a.Timestamp == latestTs.Value)
-                    .SumAsync(a => a.AveragePowerWatts);
+                    .ToListAsync();
+
+                dto.CurrentPowerWatts = latestRows.Sum(a => a.AverageActivePowerWatts);
+                dto.TotalCurrentAmps = latestRows.Sum(a => a.AverageCurrentAmps);
+                dto.AverageVoltageVolts = latestRows.Any()
+                    ? latestRows.Average(a => a.AverageVoltageVolts)
+                    : 0f;
+                dto.AveragePowerFactor = latestRows.Any()
+                    ? latestRows.Average(a => a.AveragePowerFactor)
+                    : 0f;
             }
 
-            // ── Total rated power (sum of all device nameplates) ───────────────
-            // Used as the "rated" midpoint marker on the consumption progress bar.
+            // ── Rated power ───────────────────────────────────────────────────
             dto.TotalRatedPowerWatts = await _context.Devices
                 .Where(d => d.OrganisationId == organisationId)
                 .SumAsync(d => (float?)d.RatedPowerWatts) ?? 0f;
 
-            // ── Month-to-date totals ───────────────────────────────────────────
-            var totalKwhMonth = await _repository.GetTotalConsumptionAsync(
-                organisationId, startOfMonth, endOfMonth);
-
+            // ── Month-to-date totals ──────────────────────────────────────────
+            var totalKwhMonth = await _repository.GetTotalConsumptionAsync(organisationId, startOfMonth, endOfMonth);
             dto.Consumption = totalKwhMonth;
-            dto.Cost = (float)Math.Round(totalKwhMonth * _costPerKwh, 2);
-            dto.Carbon = (float)Math.Round(totalKwhMonth * _carbonKgPerKwh, 2);
+            dto.Cost = (float)Math.Round(totalKwhMonth * costPerKwh, 2);
 
-            // ── Organisation power budget ──────────────────────────────────────
-            var org = await _context.Organisations.FindAsync(organisationId);
+            // ── Org power budget ──────────────────────────────────────────────
             dto.EnergyBudget = org?.EnergyBudget ?? 0f;
 
             return dto;

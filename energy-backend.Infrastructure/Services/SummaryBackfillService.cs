@@ -39,7 +39,7 @@ namespace energy_backend.Infrastructure.Services
                         g.Key.DeviceId,
                         g.Key.Year,
                         g.Key.Month,
-                        Total = g.Sum(r => r.PowerWatts)
+                        Total = g.Sum(r => r.ActivePowerWatts)
                     })
                     .ToListAsync(stoppingToken);
 

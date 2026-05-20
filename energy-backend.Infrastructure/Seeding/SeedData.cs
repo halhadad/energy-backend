@@ -71,11 +71,14 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts * 0.88f,
-                    MaxPowerWatts = watts * 1.12f,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.88f,
+                    MaxActivePowerWatts = watts * 1.12f,
                     TotalEnergyKwh = kwh,
-                    DataPointsCount = 12
+                    DataPointsCount = 12,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
                 });
 
                 cursor = cursor.AddMinutes(1);
@@ -122,11 +125,14 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts * 0.75f,
-                    MaxPowerWatts = watts * 1.25f,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.75f,
+                    MaxActivePowerWatts = watts * 1.25f,
                     TotalEnergyKwh = kwh,
-                    DataPointsCount = 720
+                    DataPointsCount = 720,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
                 });
 
                 cursor = cursor.AddHours(1);
@@ -166,11 +172,14 @@ namespace energy_backend.Infrastructure.Seeding
                     OrgId = device.OrganisationId,
                     DeviceId = device.DeviceId,
                     Timestamp = cursor.Date,
-                    AveragePowerWatts = watts,
-                    MinPowerWatts = watts * 0.60f,
-                    MaxPowerWatts = watts * 1.40f,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.60f,
+                    MaxActivePowerWatts = watts * 1.40f,
                     TotalEnergyKwh = kwh,
-                    DataPointsCount = 17280
+                    DataPointsCount = 17280,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
                 });
 
                 cursor = cursor.AddDays(1);
@@ -205,11 +214,14 @@ namespace energy_backend.Infrastructure.Seeding
                 OrgId = device.OrganisationId,
                 DeviceId = device.DeviceId,
                 Timestamp = monthStart,
-                AveragePowerWatts = watts,
-                MinPowerWatts = watts * 0.55f,
-                MaxPowerWatts = watts * 1.45f,
+                AverageActivePowerWatts = watts,
+                MinActivePowerWatts = watts * 0.55f,
+                MaxActivePowerWatts = watts * 1.45f,
                 TotalEnergyKwh = kwh,
-                DataPointsCount = daysInMonth * 17280
+                DataPointsCount = daysInMonth * 17280,
+                AverageVoltageVolts = 230f,
+                AverageCurrentAmps = watts / 230f,
+                AveragePowerFactor = 0.95f
             });
 
             await ctx.SaveChangesAsync();

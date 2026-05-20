@@ -35,13 +35,13 @@ namespace energy_backend.Infrastructure.Repositories
             return await context.EnergyReadings
                 .Include(r => r.Device)
                 .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= since)
-                .SumAsync(r => r.PowerWatts);
+                .SumAsync(r => r.ActivePowerWatts);
         }
 
         public async Task<float> GetTodaysCostAsync(Guid organisationId, float costPerUnit)
         {
             var readingsToday = await GetReadingsForTodayAsync(organisationId);
-            return (float)Math.Round(readingsToday.Sum(x => x.PowerWatts * costPerUnit), 2);
+            return (float)Math.Round(readingsToday.Sum(x => x.ActivePowerWatts * costPerUnit), 2);
         }
 
         public async Task<Dictionary<string, float>> GetDailyBreakdownByDeviceTypeAsync(Guid organisationId)
@@ -49,7 +49,7 @@ namespace energy_backend.Infrastructure.Repositories
             var readingsToday = await GetReadingsForTodayAsync(organisationId);
             return readingsToday
                 .GroupBy(r => r.Device!.Type)
-                .ToDictionary(g => g.Key, g => g.Sum(r => r.PowerWatts));
+                .ToDictionary(g => g.Key, g => g.Sum(r => r.ActivePowerWatts));
         }
 
         public async Task<Dictionary<string, float>> GetWeeklyBreakdownByDeviceTypeAsync(Guid organisationId)
@@ -57,7 +57,7 @@ namespace energy_backend.Infrastructure.Repositories
             var readingsWeek = await GetReadingsForWeekAsync(organisationId);
             return readingsWeek
                 .GroupBy(r => r.Device!.Type)
-                .ToDictionary(g => g.Key, g => g.Sum(r => r.PowerWatts));
+                .ToDictionary(g => g.Key, g => g.Sum(r => r.ActivePowerWatts));
         }
 
         public async Task<Dictionary<string, float>> GetHourlyBreakdownTodayAsync(Guid organisationId)
@@ -66,7 +66,7 @@ namespace energy_backend.Infrastructure.Repositories
             return readingsToday
                 .GroupBy(r => r.Timestamp.Hour)
                 .OrderBy(g => g.Key)
-                .ToDictionary(g => $"{g.Key}:00", g => g.Sum(r => r.PowerWatts));
+                .ToDictionary(g => $"{g.Key}:00", g => g.Sum(r => r.ActivePowerWatts));
         }
 
         public async Task<Dictionary<string, float>> GetDailyBreakdownThisWeekAsync(Guid organisationId)
@@ -75,7 +75,7 @@ namespace energy_backend.Infrastructure.Repositories
             return readingsWeek
                 .GroupBy(r => r.Timestamp.Date)
                 .OrderBy(g => g.Key)
-                .ToDictionary(g => g.Key.ToString("ddd"), g => g.Sum(r => r.PowerWatts));
+                .ToDictionary(g => g.Key.ToString("ddd"), g => g.Sum(r => r.ActivePowerWatts));
         }
     }
 }
