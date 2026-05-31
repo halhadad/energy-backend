@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Core.Interfaces;
-using energy_backend.Data;
+using energy_backend.Infrastructure.Data;
 using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +17,7 @@ namespace energy_backend.Infrastructure.Repositories
             var startOfToday = DateTime.UtcNow.Date;
             return await context.EnergyReadings
                 .Include(r => r.Device)
-                .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= startOfToday)
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
                 .ToListAsync();
         }
 
@@ -26,15 +26,14 @@ namespace energy_backend.Infrastructure.Repositories
             var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
             return await context.EnergyReadings
                 .Include(r => r.Device)
-                .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= startOfWeek)
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
                 .ToListAsync();
         }
 
         public async Task<float> GetCurrentConsumptionAsync(Guid organisationId, DateTime since)
         {
             return await context.EnergyReadings
-                .Include(r => r.Device)
-                .Where(r => r.Device.OrganisationId == organisationId && r.Timestamp >= since)
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= since)
                 .SumAsync(r => r.ActivePowerWatts);
         }
 
@@ -46,36 +45,46 @@ namespace energy_backend.Infrastructure.Repositories
 
         public async Task<Dictionary<string, float>> GetDailyBreakdownByDeviceTypeAsync(Guid organisationId)
         {
-            var readingsToday = await GetReadingsForTodayAsync(organisationId);
-            return readingsToday
+            var startOfToday = DateTime.UtcNow.Date;
+            return await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
                 .GroupBy(r => r.Device!.Type)
-                .ToDictionary(g => g.Key, g => g.Sum(r => r.ActivePowerWatts));
+                .ToDictionaryAsync(g => g.Key.ToString(), g => g.Sum(r => r.ActivePowerWatts));
         }
 
         public async Task<Dictionary<string, float>> GetWeeklyBreakdownByDeviceTypeAsync(Guid organisationId)
         {
-            var readingsWeek = await GetReadingsForWeekAsync(organisationId);
-            return readingsWeek
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
+            return await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
                 .GroupBy(r => r.Device!.Type)
-                .ToDictionary(g => g.Key, g => g.Sum(r => r.ActivePowerWatts));
+                .ToDictionaryAsync(g => g.Key.ToString(), g => g.Sum(r => r.ActivePowerWatts));
         }
 
         public async Task<Dictionary<string, float>> GetHourlyBreakdownTodayAsync(Guid organisationId)
         {
-            var readingsToday = await GetReadingsForTodayAsync(organisationId);
-            return readingsToday
+            var startOfToday = DateTime.UtcNow.Date;
+            var rows = await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
                 .GroupBy(r => r.Timestamp.Hour)
-                .OrderBy(g => g.Key)
-                .ToDictionary(g => $"{g.Key}:00", g => g.Sum(r => r.ActivePowerWatts));
+                .Select(g => new { Hour = g.Key, Total = g.Sum(r => r.ActivePowerWatts) })
+                .OrderBy(g => g.Hour)
+                .ToListAsync();
+
+            return rows.ToDictionary(g => $"{g.Hour}:00", g => g.Total);
         }
 
         public async Task<Dictionary<string, float>> GetDailyBreakdownThisWeekAsync(Guid organisationId)
         {
-            var readingsWeek = await GetReadingsForWeekAsync(organisationId);
-            return readingsWeek
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
+            var rows = await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
                 .GroupBy(r => r.Timestamp.Date)
-                .OrderBy(g => g.Key)
-                .ToDictionary(g => g.Key.ToString("ddd"), g => g.Sum(r => r.ActivePowerWatts));
+                .Select(g => new { Day = g.Key, Total = g.Sum(r => r.ActivePowerWatts) })
+                .OrderBy(g => g.Day)
+                .ToListAsync();
+
+            return rows.ToDictionary(g => g.Day.ToString("ddd"), g => g.Total);
         }
     }
 }

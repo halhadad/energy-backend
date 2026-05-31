@@ -1,22 +1,17 @@
-﻿namespace energy_backend.Core.Entities
+﻿using energy_backend.Core.Enums;
+using System.ComponentModel.DataAnnotations;
+
+namespace energy_backend.Core.Entities
 {
-    /// <summary>
-    /// A physical IoT-monitored device belonging to an Organisation.
-    /// RatedPowerWatts is the nameplate power (W) used as the simulation
-    /// baseline and the budget reference shown on the dashboard.
-    /// </summary>
+
     public class Device
     {
+        [Key]
         public Guid DeviceId { get; set; }
         public Guid OrganisationId { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Nameplate / rated power in Watts.
-        /// Used as the simulation baseline and shown as the "rated" midpoint
-        /// on the Current Consumption progress bar.
-        /// </summary>
+        public DeviceType Type { get; set; }
+        public string? Description { get; set; }
         public float RatedPowerWatts { get; set; }
 
         // Navigation properties

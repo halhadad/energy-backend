@@ -1,12 +1,12 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using energy_backend.Core.Entities;
-using energy_backend.Models;
+using energy_backend.Application.Models;
 using energy_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using energy_backend.Application.Services;
+using energy_backend.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -20,7 +20,7 @@ namespace energy_backend.Controllers
 
         [HttpPost]
         [Route("register")]
-        public async Task<ActionResult<User>> Register(UserRequestDto request)
+        public async Task<ActionResult<UserResponseDto>> Register(UserRequestDto request)
         {
             var user = await authService.RegisterAsync(request);
             if (user is null)
@@ -53,22 +53,6 @@ namespace energy_backend.Controllers
                 return Unauthorized("Invalid refresh token");
             }
             return Ok(response);
-        }
-
-        [Authorize]
-        [HttpGet]
-        public IActionResult AuthenticatedOnlyEndpoint()
-        {
-            // This endpoint is only accessible to authenticated users
-            return Ok("You are authenticated!");
-        }
-
-        [Authorize(Roles = "Admin")]
-        [HttpGet("admin-only")]
-        public IActionResult AdminOnlyEndpoint()
-        {
-            // This endpoint is only accessible to authenticated admins
-            return Ok("You are in an admin only room!");
         }
 
     }

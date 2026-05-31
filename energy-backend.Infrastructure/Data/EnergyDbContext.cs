@@ -1,20 +1,17 @@
 using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace energy_backend.Data
+namespace energy_backend.Infrastructure.Data
 {
     public class EnergyDbContext(DbContextOptions<EnergyDbContext> options) : DbContext(options)
     {
-        public DbSet<Energy> Energies => Set<Energy>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Organisation> Organisations => Set<Organisation>();
         public DbSet<Device> Devices => Set<Device>();
         public DbSet<Setting> Settings => Set<Setting>();
         public DbSet<Alert> Alerts => Set<Alert>();
         public DbSet<EnergyReading> EnergyReadings => Set<EnergyReading>();
-        public DbSet<AggregatedEnergy> AggregatedEnergies => Set<AggregatedEnergy>();
         public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
-        public DbSet<DeviceConsumptionSummary> DeviceConsumptionSummaries => Set<DeviceConsumptionSummary>();
 
         public DbSet<AggregateMinuteEnergy> AggregateMinuteEnergies => Set<AggregateMinuteEnergy>();
         public DbSet<AggregateHourEnergy> AggregateHourEnergies => Set<AggregateHourEnergy>();
@@ -28,15 +25,14 @@ namespace energy_backend.Data
                 .HasIndex(e => new { e.DeviceId, e.Timestamp })
                 .IsUnique();
 
-            // AggregatedEnergy (legacy table) 
-            modelBuilder.Entity<AggregatedEnergy>()
-                .HasIndex(a => new { a.DeviceId, a.PeriodStartTime })
-                .IsUnique();
+            modelBuilder.Entity<EnergyReading>()
+                .HasIndex(e => new { e.Timestamp, e.DeviceId });
 
             // AggregateMinuteEnergy 
             modelBuilder.Entity<AggregateMinuteEnergy>(entity =>
             {
                 entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
 
                 entity.HasOne(a => a.Device)
                     .WithMany()
@@ -53,6 +49,7 @@ namespace energy_backend.Data
             modelBuilder.Entity<AggregateHourEnergy>(entity =>
             {
                 entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
 
                 entity.HasOne(a => a.Device)
                     .WithMany()
@@ -69,6 +66,7 @@ namespace energy_backend.Data
             modelBuilder.Entity<AggregateDayEnergy>(entity =>
             {
                 entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
 
                 entity.HasOne(a => a.Device)
                     .WithMany()
@@ -85,6 +83,7 @@ namespace energy_backend.Data
             modelBuilder.Entity<AggregateMonthEnergy>(entity =>
             {
                 entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
 
                 entity.HasOne(a => a.Device)
                     .WithMany()

@@ -5,14 +5,18 @@ using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Core.Entities;
 
-namespace energy_backend.Core.Interfaces
+namespace energy_backend.Core.Interfaces;
+
+public interface IAlertRepository
 {
-    public interface IAlertRepository
-    {
     Task<IEnumerable<Alert>> GetByUserIdAsync(Guid userId);
     Task<Alert?> GetByIdAsync(Guid userId, Guid alertId);
+
+    /// <summary>Used by background evaluators — returns all alerts with Organisation nav loaded.</summary>
+    Task<List<Alert>> GetAllWithOrganisationsAsync();
+
     Task AddAsync(Alert alert);
+    Task AddEventAsync(AlertEvent alertEvent);
     Task DeleteAsync(Alert alert);
     Task SaveChangesAsync();
-}
 }

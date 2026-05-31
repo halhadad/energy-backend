@@ -15,7 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\energy-backend.Core\energy-backend.Domain.csproj" />
+    <ProjectReference Include="..\energy-backend.Core\energy-backend.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Common\Mappings\" />
+    <Folder Include="Common\Validation\" />
   </ItemGroup>
 
 </Project>

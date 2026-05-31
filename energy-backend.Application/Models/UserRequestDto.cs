@@ -1,8 +1,7 @@
-﻿namespace energy_backend.Models
+namespace energy_backend.Application.Models;
+
+public class UserRequestDto
 {
-    public class UserRequestDto
-    {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }

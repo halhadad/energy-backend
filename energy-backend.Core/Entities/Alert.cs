@@ -5,18 +5,19 @@
         public Guid AlertId { get; set; }
         public Guid OrganisationId { get; set; }
         public string Name { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Alert fires when total org active power (sum of all device
-        /// AveragePowerWatts at the latest minute bucket) exceeds this value.
-        /// Unit: Watts (W).
-        /// </summary>
-        public float Threshold { get; set; }
-
-        /// <summary>True while the org power is above Threshold.</summary>
+        public float ThresholdValue { get; set; }
         public bool IsActive { get; set; }
 
-        public DateTime? LastTriggeredAt { get; set; }
+        // Notification Preferences
+        public bool EmailEnabled { get; set; } = true;
+        public bool InAppNotificationEnabled { get; set; } = true;
+
+        // Smart Cooldowns
+        public float InAppCooldownMinutes { get; set; } = 60; // Spammy is okay here
+        public float EmailCooldownMinutes { get; set; } = 1440; // 24 hours: Do not spam email
+
+        public DateTime? LastTriggeredInAppAt { get; set; }
+        public DateTime? LastTriggeredEmailAt { get; set; }
 
         // Navigation properties
         public Organisation? Organisation { get; set; }

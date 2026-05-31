@@ -1,0 +1,33 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "markdown",
+    "parsable": false,
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "topHeaderContent": null,
+    "showSummary": false
+  },
+  "include": [
+    "**/*.cs",
+    "**/*.json",
+    "**/*.http"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/Migrations/**",
+      "**/*.Tests/**",
+      "**/.vs/**",
+      "**/.git*/**",
+      ".gitattributes",
+      ".gitignore",
+      "*.db",
+      "*.sln",
+      "*.csproj"
+    ]
+  }
+}

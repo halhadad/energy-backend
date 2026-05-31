@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Application;
+using energy_backend.Core;
 using energy_backend.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,7 @@ namespace energy_backend.Api
         public static IServiceCollection AddApiServices(this IServiceCollection services)
         {
             services.AddApplicationServices()
+                .AddCoreServices()
                 .AddInfrastructureServices();
             return services;
         }

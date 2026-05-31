@@ -1,12 +1,10 @@
-﻿using energy_backend.Core.Entities;
-using energy_backend.Models;
+using energy_backend.Application.Models;
 
-namespace energy_backend.Application.Services
+namespace energy_backend.Application.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<User?> RegisterAsync(UserRequestDto request);
-        Task<LoginResponseDto?> LoginAsync(UserRequestDto request);
-        Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto requestDto);
-    }
+    Task<UserResponseDto?> RegisterAsync(UserRequestDto request);
+    Task<LoginResponseDto?> LoginAsync(UserRequestDto request);
+    Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto requestDto);
 }

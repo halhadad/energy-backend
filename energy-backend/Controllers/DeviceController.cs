@@ -1,9 +1,9 @@
 ﻿using System.Security.Claims;
-using energy_backend.Models;
+using energy_backend.Application.Models;
 using energy_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using energy_backend.Application.Services;
+using energy_backend.Application.Interfaces;
 
 namespace energy_backend.Controllers
 {
@@ -32,11 +32,43 @@ namespace energy_backend.Controllers
         {
             var userId = GetUserId();
             if (userId == null) return Unauthorized("Invalid user.");
-
             var devices = await deviceService.GetDevicesByOrganisationIdAsync(userId.Value, orgId);
             return Ok(devices);
         }
 
+        /// <summary>
+        /// Paginated device list for an organisation.
+        /// GET /api/Device/byOrganisation/{orgId}/paged?page=1&pageSize=10
+        /// Returns: { items, total, page, pageSize, totalPages }
+        /// </summary>
+        [HttpGet("byOrganisation/{orgId}/paged")]
+        public async Task<IActionResult> GetByOrganisationIdPaged(
+            Guid orgId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 100) pageSize = 10;
+
+            var all = (await deviceService.GetDevicesByOrganisationIdAsync(userId.Value, orgId)).ToList();
+            var total = all.Count;
+            var items = all
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return Ok(new
+            {
+                items,
+                total,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)total / pageSize)
+            });
+        }
 
         [HttpGet("{deviceId}")]
         public async Task<IActionResult> GetById(Guid deviceId)

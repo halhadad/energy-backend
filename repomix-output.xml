@@ -1,0 +1,4096 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files and files not matching ignore patterns, combined into a single document by Repomix.
+The content has been processed where comments have been removed, empty lines have been removed.
+
+# File Summary
+
+## Purpose
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+## File Format
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A header with the file path (## File: path/to/file)
+  b. The full contents of the file in a code block
+
+## Usage Guidelines
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+## Notes
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: **/*.cs, **/*.json, **/*.http
+- Files matching these patterns are excluded: **/bin/**, **/obj/**, **/Migrations/**, **/*.Tests/**, **/.vs/**, **/.git*/**, .gitattributes, .gitignore, *.db, *.sln, *.csproj
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Code comments have been removed from supported file types
+- Empty lines have been removed from all files
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+# Directory Structure
+```
+energy-backend.Application/DependencyInjection.cs
+energy-backend.Application/Interfaces/IAggregationCoordinatorService.cs
+energy-backend.Application/Interfaces/IAggregationService.cs
+energy-backend.Application/Interfaces/IAlertService.cs
+energy-backend.Application/Interfaces/IAlertStreamService.cs
+energy-backend.Application/Interfaces/IAuthService.cs
+energy-backend.Application/Interfaces/IDeviceService.cs
+energy-backend.Application/Interfaces/IEnergyAnalyticsOrchestratorService.cs
+energy-backend.Application/Interfaces/IHubNotificationService.cs
+energy-backend.Application/Interfaces/IOrganisationService.cs
+energy-backend.Application/Interfaces/IRealTimeDataStreamService.cs
+energy-backend.Application/Interfaces/ISettingService.cs
+energy-backend.Application/Models/AggregationRequestDto.cs
+energy-backend.Application/Models/AggregationResultDto.cs
+energy-backend.Application/Models/AlertRequestDto.cs
+energy-backend.Application/Models/AlertResponseDto.cs
+energy-backend.Application/Models/DeviceMetricSummaryDto.cs
+energy-backend.Application/Models/DeviceRequestDto.cs
+energy-backend.Application/Models/DeviceResponseDto.cs
+energy-backend.Application/Models/EnergyMetricRollupDto.cs
+energy-backend.Application/Models/LoginResponseDto.cs
+energy-backend.Application/Models/OrganisationAnalyticsDto.cs
+energy-backend.Application/Models/OrganisationRequestDto.cs
+energy-backend.Application/Models/OrganisationResponseDto.cs
+energy-backend.Application/Models/RefreshTokenRequestDto.cs
+energy-backend.Application/Models/SettingDto.cs
+energy-backend.Application/Models/SignalR/RealTimeDtos.cs
+energy-backend.Application/Models/TimeSeriesDataPoint.cs
+energy-backend.Application/Models/TokenResponseDto.cs
+energy-backend.Application/Models/UserRequestDto.cs
+energy-backend.Application/Models/UserResponseDto.cs
+energy-backend.Application/Services/AggregationService.cs
+energy-backend.Application/Services/AlertService.cs
+energy-backend.Application/Services/AuthService.cs
+energy-backend.Application/Services/DeviceService.cs
+energy-backend.Application/Services/EnergyAnalyticsOrchestratorService.cs
+energy-backend.Application/Services/OrganisationService.cs
+energy-backend.Application/Services/SettingService.cs
+energy-backend.Core/Common/TimeSlots.cs
+energy-backend.Core/DependencyInjection.cs
+energy-backend.Core/Entities/AggregateDayEnergy.cs
+energy-backend.Core/Entities/AggregateHourEnergy.cs
+energy-backend.Core/Entities/AggregateMinuteEnergy.cs
+energy-backend.Core/Entities/AggregateMonthEnergy.cs
+energy-backend.Core/Entities/Alert.cs
+energy-backend.Core/Entities/AlertEvent.cs
+energy-backend.Core/Entities/Device.cs
+energy-backend.Core/Entities/EnergyReading.cs
+energy-backend.Core/Entities/Organisation.cs
+energy-backend.Core/Entities/Setting.cs
+energy-backend.Core/Entities/User.cs
+energy-backend.Core/Enums/DeviceType.cs
+energy-backend.Core/Enums/TimeGranularity.cs
+energy-backend.Core/Interfaces/IAggregateRepository.cs
+energy-backend.Core/Interfaces/IAlertEvaluationRepository.cs
+energy-backend.Core/Interfaces/IAlertRepository.cs
+energy-backend.Core/Interfaces/IAnalyticsRepository.cs
+energy-backend.Core/Interfaces/IDemoDataSeeder.cs
+energy-backend.Core/Interfaces/IDeviceRepository.cs
+energy-backend.Core/Interfaces/IEnergyAggregate.cs
+energy-backend.Core/Interfaces/IEnergyReadingRepository.cs
+energy-backend.Core/Interfaces/IEnergyRollupRepository.cs
+energy-backend.Core/Interfaces/IOrganisationRepository.cs
+energy-backend.Core/Interfaces/ISettingRepository.cs
+energy-backend.Core/Interfaces/IUserRepository.cs
+energy-backend.Core/Services/EnergyCalculator.cs
+energy-backend.Infrastructure/BackgroundWorkers/HistoricalDownsamplingWorker.cs
+energy-backend.Infrastructure/BackgroundWorkers/RecurrentDataRollupWorker.cs
+energy-backend.Infrastructure/Data/EnergyDbContext.cs
+energy-backend.Infrastructure/DependencyInjection.cs
+energy-backend.Infrastructure/Hubs/UnifiedHub.cs
+energy-backend.Infrastructure/Repositories/AggregateRepository.cs
+energy-backend.Infrastructure/Repositories/AlertEvaluationRepository.cs
+energy-backend.Infrastructure/Repositories/AlertRepository.cs
+energy-backend.Infrastructure/Repositories/AnalyticsRepository.cs
+energy-backend.Infrastructure/Repositories/DeviceRepository.cs
+energy-backend.Infrastructure/Repositories/EnergyReadingRepository.cs
+energy-backend.Infrastructure/Repositories/EnergyRollupRepository.cs
+energy-backend.Infrastructure/Repositories/OrganisationRepository.cs
+energy-backend.Infrastructure/Repositories/SettingRepository.cs
+energy-backend.Infrastructure/Repositories/UserRepository.cs
+energy-backend.Infrastructure/Seeding/DemoDataSeeder.cs
+energy-backend.Infrastructure/Seeding/SeedData.cs
+energy-backend.Infrastructure/Services/AggregationCoordinatorService.cs
+energy-backend.Infrastructure/Services/AlertNotificationEvaluator.cs
+energy-backend.Infrastructure/Services/HubNotificationService.cs
+energy-backend.Infrastructure/Services/LiveAlertSignalRHub.cs
+energy-backend.Infrastructure/Services/LiveEnergySignalRHub.cs
+energy-backend.Infrastructure/Services/MockDataSimulationWorker.cs
+energy-backend/appsettings.Development.json
+energy-backend/appsettings.json
+energy-backend/Controllers/AlertsController.cs
+energy-backend/Controllers/AuthController.cs
+energy-backend/Controllers/DeviceController.cs
+energy-backend/Controllers/EnergyController.cs
+energy-backend/Controllers/OrganisationController.cs
+energy-backend/Controllers/SettingsController.cs
+energy-backend/DependencyInjection.cs
+energy-backend/Program.cs
+energy-backend/Properties/launchSettings.json
+repomix.config.json
+```
+
+# Files
+
+## File: energy-backend.Application/Interfaces/IEnergyAnalyticsOrchestratorService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IEnergyAnalyticsOrchestratorService
+{
+    Task<OrganisationAnalyticsDto?> GetOrganisationAnalyticsAsync(Guid organisationId);
+}
+```
+
+## File: energy-backend.Application/Interfaces/ISettingService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface ISettingService
+{
+    Task<SettingResponseDto> GetOrCreateAsync(Guid userId);
+    Task<SettingResponseDto> UpdateAsync(Guid userId, UpdateSettingDto dto);
+}
+```
+
+## File: energy-backend.Application/Models/DeviceMetricSummaryDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class DeviceMetricSummaryDto
+{
+    public Guid DeviceId { get; set; }
+    public List<DevicePeriodMetricDto> Intervals { get; set; } = [];
+}
+public class DevicePeriodMetricDto
+{
+    public DateTime Timestamp { get; set; }
+    public decimal TotalEnergyKwh { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/EnergyMetricRollupDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class EnergyMetricRollupDto
+{
+    public DateTime Timestamp { get; set; }
+    public string Label { get; set; } = string.Empty;
+    public decimal TotalEnergyKwh { get; set; }
+    public double AverageActivePowerWatts { get; set; }
+    public double MinActivePowerWatts { get; set; }
+    public double MaxActivePowerWatts { get; set; }
+    public double AverageVoltageVolts { get; set; }
+    public double TotalCurrentAmps { get; set; }
+    public double AveragePowerFactor { get; set; }
+    public int DataPointsCount { get; set; }
+    public decimal EstimatedCost { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/SettingDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class SettingResponseDto
+{
+    public float ElectricityCostPerKwh { get; set; }
+    public bool PeakAlerts { get; set; }
+    public bool UnusualAlerts { get; set; }
+    public bool BudgetAlerts { get; set; }
+    public bool RequireEmail { get; set; }
+    public Guid FavoriteOrg { get; set; }
+}
+public class UpdateSettingDto
+{
+    public float? ElectricityCostPerKwh { get; set; }
+    public bool? PeakAlerts { get; set; }
+    public bool? UnusualAlerts { get; set; }
+    public bool? BudgetAlerts { get; set; }
+    public bool? RequireEmail { get; set; }
+    public Guid? FavoriteOrg { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/SignalR/RealTimeDtos.cs
+```csharp
+namespace energy_backend.Application.Models.SignalR;
+public class RealTimeEnergyIntervalDto
+{
+    public Guid OrgId { get; set; }
+    public string Range { get; set; } = string.Empty;
+    public int IntervalSizeMinutes { get; set; }
+    public long Sequence { get; set; }
+    public long Version { get; set; }
+    public List<EnergyIntervalSummaryDto> Intervals { get; set; } = new();
+    public List<DeviceIntervalSeriesDto> DeviceSeries { get; set; } = new();
+}
+public class EnergyIntervalSummaryDto
+{
+    public DateTime Timestamp { get; set; }
+    public string Label { get; set; } = string.Empty;
+    public decimal TotalEnergy { get; set; }
+    public double AverageWatts { get; set; }
+    public double AverageVoltage { get; set; }
+    public double TotalCurrent { get; set; }
+    public decimal EstimatedCost { get; set; }
+    public List<DeviceEnergyContributionDto> DeviceContributions { get; set; } = new();
+}
+public class DeviceIntervalSeriesDto
+{
+    public Guid DeviceId { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public List<EnergyIntervalSummaryDto> Intervals { get; set; } = new();
+}
+public class DeviceEnergyContributionDto
+{
+    public Guid DeviceId { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public decimal TotalEnergyKwh { get; set; }
+}
+```
+
+## File: energy-backend.Application/Services/AggregationService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using energy_backend.Core.Enums;
+using energy_backend.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Application.Services;
+public class AggregationService(
+    IAnalyticsRepository analyticsRepo,
+    ILogger<AggregationService> logger) : IAggregationService
+{
+    private const float ReadingIntervalSeconds = 5f;
+    public async Task<AggregationResultDto> GetSnapshotAsync(AggregationRequestDto request)
+    {
+        request.StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc);
+        request.EndTime = DateTime.SpecifyKind(request.EndTime, DateTimeKind.Utc);
+        var labelFormat = request.Granularity switch
+        {
+            TimeGranularity.Minute => "HH:mm:ss",
+            TimeGranularity.Hour   => "HH:mm",
+            TimeGranularity.Day    => "ddd d",
+            TimeGranularity.Month  => "MMM yy",
+            _                      => "HH:mm:ss"
+        };
+        var rawMetrics = await analyticsRepo.GetSnapshotMetricsAsync(
+            request.OrganisationId,
+            request.StartTime,
+            request.EndTime,
+            request.Granularity);
+        var dataPoints = rawMetrics.Select(r => new TimeSeriesDataPoint
+        {
+            Timestamp = r.Timestamp,
+            Value = (double)r.TotalEnergyKwh,
+            Label = r.Timestamp.ToString(labelFormat),
+            AverageWatts = r.AverageActivePowerWatts,
+            AverageVoltageVolts = r.AverageVoltageVolts,
+            TotalCurrentAmps = r.AverageCurrentAmps,
+            AveragePowerFactor = r.AveragePowerFactor
+        }).ToList();
+        return new AggregationResultDto
+        {
+            DataPoints = dataPoints,
+            TotalValue = dataPoints.Sum(x => x.Value),
+            AggregationPeriod = request.Granularity.ToString()
+        };
+    }
+}
+```
+
+## File: energy-backend.Application/Services/AlertService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+namespace energy_backend.Application.Services;
+public class AlertService(
+    IAlertRepository alertRepo,
+    IOrganisationRepository orgRepo) : IAlertService
+{
+    public async Task<IEnumerable<AlertResponseDto>?> GetActiveAlertsAsync(Guid userId)
+    {
+        var alerts = await alertRepo.GetByUserIdAsync(userId);
+        return alerts.Select(MapAlertToDto).ToList();
+    }
+    public async Task<AlertResponseDto?> CreateAlertAsync(Guid userId, AlertRequestDto request)
+    {
+        var organisation = await orgRepo.GetByIdAsync(userId, request.OrganisationId);
+        if (organisation is null) return null;
+        var alert = new Alert
+        {
+            AlertId = Guid.NewGuid(),
+            OrganisationId = request.OrganisationId,
+            Name = request.Name,
+            ThresholdValue = request.Threshold
+        };
+        await alertRepo.AddAsync(alert);
+        await alertRepo.SaveChangesAsync();
+        return MapAlertToDto(alert);
+    }
+    public async Task<bool> DeleteAlertAsync(Guid userId, Guid alertId)
+    {
+        var alert = await alertRepo.GetByIdAsync(userId, alertId);
+        if (alert is null) return false;
+        await alertRepo.DeleteAsync(alert);
+        await alertRepo.SaveChangesAsync();
+        return true;
+    }
+    private static AlertResponseDto MapAlertToDto(Alert alert) => new()
+    {
+        AlertId = alert.AlertId,
+        Name = alert.Name,
+        Threshold = alert.ThresholdValue,
+        IsActive = alert.IsActive,
+        LastTriggeredAt = alert.LastTriggeredInAppAt
+    };
+}
+```
+
+## File: energy-backend.Application/Services/AuthService.cs
+```csharp
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+namespace energy_backend.Application.Services;
+public class AuthService(
+    IUserRepository userRepository,
+    IConfiguration configuration) : IAuthService
+{
+    public async Task<LoginResponseDto?> LoginAsync(UserRequestDto request)
+    {
+        var user = await userRepository.GetByUsernameAsync(request.Username);
+        if (user is null) return null;
+        var hasher = new PasswordHasher<User>();
+        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (result != PasswordVerificationResult.Success) return null;
+        return new LoginResponseDto
+        {
+            AccessToken = CreateToken(user),
+            RefreshToken = await GenerateAndSaveRefreshTokenAsync(user),
+            User = new UserResponseDto
+            {
+                UserId = user.UserId,
+                Username = user.Username,
+                Role = user.Role
+            }
+        };
+    }
+    public async Task<UserResponseDto?> RegisterAsync(UserRequestDto request)
+    {
+        if (await userRepository.ExistsAsync(request.Username)) return null;
+        var user = new User();
+        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, request.Password);
+        user.Username = request.Username;
+        await userRepository.AddAsync(user);
+        await userRepository.SaveChangesAsync();
+        return new UserResponseDto
+        {
+            UserId = user.UserId,
+            Username = user.Username,
+            Role = user.Role
+        };
+    }
+    public async Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto request)
+    {
+        var user = await userRepository.GetByIdAsync(request.UserId);
+        if (user is null
+            || user.RefreshToken != request.RefreshToken
+            || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        {
+            return null;
+        }
+        return new TokenResponseDto
+        {
+            AccessToken = CreateToken(user),
+            RefreshToken = await GenerateAndSaveRefreshTokenAsync(user)
+        };
+    }
+    private async Task<string> GenerateAndSaveRefreshTokenAsync(User user)
+    {
+        var randomNumber = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomNumber);
+        var token = Convert.ToBase64String(randomNumber);
+        user.RefreshToken = token;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        await userRepository.SaveChangesAsync();
+        return token;
+    }
+    private string CreateToken(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new(ClaimTypes.Role, user.Role)
+        };
+        var key = new SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes(
+                GetRequiredJwtToken()));
+        var tokenDescriptor = new JwtSecurityToken(
+            issuer: configuration.GetValue<string>("AppSettings:Issuer"),
+            audience: configuration.GetValue<string>("AppSettings:Audience"),
+            claims: claims,
+            expires: DateTime.UtcNow.AddDays(1),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature));
+        return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+    }
+    private string GetRequiredJwtToken()
+    {
+        var token = configuration.GetValue<string>("AppSettings:Token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException(
+                "JWT token is not configured. Set AppSettings:Token via dotnet user-secrets or the AppSettings__Token environment variable.");
+        }
+        return token;
+    }
+}
+```
+
+## File: energy-backend.Application/Services/DeviceService.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Services;
+public class DeviceService(
+    IDeviceRepository repository,
+    IOrganisationRepository orgRepo,
+    IDemoDataSeeder demoSeeder) : IDeviceService
+{
+    public async Task<IEnumerable<DeviceResponseDto>> GetDevicesAsync(Guid userId)
+    {
+        var devices = await repository.GetAllByUserIdAsync(userId);
+        return devices.Select(MapDeviceToDto);
+    }
+    public async Task<DeviceResponseDto?> GetDeviceByIdAsync(Guid userId, Guid deviceId)
+    {
+        var device = await repository.GetByIdAsync(userId, deviceId);
+        return device is null ? null : MapDeviceToDto(device);
+    }
+    public async Task<DeviceResponseDto?> CreateDeviceAsync(Guid userId, DeviceRequestDto request)
+    {
+        var organisation = await orgRepo.GetByIdAsync(userId, request.OrganisationId);
+        if (organisation is null) return null;
+        var device = new Device
+        {
+            DeviceId = Guid.NewGuid(),
+            OrganisationId = request.OrganisationId,
+            Name = request.Name,
+            Type = Enum.TryParse<Core.Enums.DeviceType>(request.Type, true, out var t) ? t : Core.Enums.DeviceType.Other,
+            RatedPowerWatts = request.RatedPowerWatts
+        };
+        await repository.AddAsync(device);
+        await repository.SaveChangesAsync();
+        await demoSeeder.SeedHistoryForDeviceAsync(device.DeviceId);
+        return MapDeviceToDto(device);
+    }
+    public async Task<DeviceResponseDto?> UpdateDeviceAsync(Guid userId, Guid deviceId, DeviceRequestDto request)
+    {
+        var device = await repository.GetByIdAsync(userId, deviceId);
+        if (device is null) return null;
+        device.Name = request.Name;
+        device.Type = Enum.TryParse<Core.Enums.DeviceType>(request.Type, true, out var t) ? t : Core.Enums.DeviceType.Other;
+        device.RatedPowerWatts = request.RatedPowerWatts;
+        await repository.SaveChangesAsync();
+        return MapDeviceToDto(device);
+    }
+    public async Task<bool> DeleteDeviceAsync(Guid userId, Guid deviceId)
+    {
+        var device = await repository.GetByIdAsync(userId, deviceId);
+        if (device is null) return false;
+        await repository.DeleteAsync(device);
+        await repository.SaveChangesAsync();
+        return true;
+    }
+    public async Task<IEnumerable<DeviceResponseDto>> GetDevicesByOrganisationIdAsync(Guid userId, Guid organisationId)
+    {
+        var devices = await repository.GetByOrganisationIdAsync(userId, organisationId);
+        return devices.Select(MapDeviceToDto);
+    }
+    private static DeviceResponseDto MapDeviceToDto(Device d) => new()
+    {
+        DeviceId = d.DeviceId,
+        OrganisationId = d.OrganisationId,
+        Name = d.Name,
+        Type = d.Type.ToString(),
+        RatedPowerWatts = d.RatedPowerWatts
+    };
+}
+```
+
+## File: energy-backend.Application/Services/EnergyAnalyticsOrchestratorService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using energy_backend.Core.Enums;
+using energy_backend.Core.Interfaces;
+using energy_backend.Core.Services;
+namespace energy_backend.Application.Services;
+public class EnergyAnalyticsOrchestratorService(IAnalyticsRepository metricRepository)
+    : IEnergyAnalyticsOrchestratorService
+{
+    public async Task<OrganisationAnalyticsDto?> GetOrganisationAnalyticsAsync(Guid organisationId)
+    {
+        var now = DateTime.UtcNow;
+        var minuteStart = now.AddMinutes(-30);
+        var hourStart = now.AddDays(-1);
+        var dayStart = now.AddDays(-7);
+        var monthStart = now.AddMonths(-1);
+        var minuteTask = metricRepository.GetRawAggregateMetricsAsync(organisationId, minuteStart, now, TimeGranularity.Minute);
+        var hourTask = metricRepository.GetRawAggregateMetricsAsync(organisationId, hourStart, now, TimeGranularity.Hour);
+        var dayTask = metricRepository.GetRawAggregateMetricsAsync(organisationId, dayStart, now, TimeGranularity.Day);
+        var monthTask = metricRepository.GetRawAggregateMetricsAsync(organisationId, monthStart, now, TimeGranularity.Month);
+        await Task.WhenAll(minuteTask, hourTask, dayTask, monthTask);
+        var costRate = await metricRepository.GetUserCostRateAsync(organisationId);
+        return new OrganisationAnalyticsDto
+        {
+            PeriodStart = monthStart,
+            PeriodEnd = now,
+            MinuteRollups = (await minuteTask).Select(x => MapToRollupDto(x, costRate, "HH:mm:ss")).ToList(),
+            HourRollups = (await hourTask).Select(x => MapToRollupDto(x, costRate, "HH:mm")).ToList(),
+            DayRollups = (await dayTask).Select(x => MapToRollupDto(x, costRate, "ddd d")).ToList(),
+            MonthRollups = (await monthTask).Select(x => MapToRollupDto(x, costRate, "MMM yy")).ToList()
+        };
+    }
+    private static EnergyMetricRollupDto MapToRollupDto(
+        (DateTime Timestamp, decimal TotalEnergy, double AvgWatts, double MinWatts, double MaxWatts,
+            double AvgVoltage, double TotalCurrent, double AvgPF, int Count) raw,
+        decimal costRate,
+        string labelFormat) => new()
+    {
+        Timestamp = raw.Timestamp,
+        Label = raw.Timestamp.ToString(labelFormat),
+        TotalEnergyKwh = raw.TotalEnergy,
+        AverageActivePowerWatts = raw.AvgWatts,
+        MinActivePowerWatts = raw.MinWatts,
+        MaxActivePowerWatts = raw.MaxWatts,
+        AverageVoltageVolts = raw.AvgVoltage,
+        TotalCurrentAmps = raw.TotalCurrent,
+        AveragePowerFactor = raw.AvgPF,
+        DataPointsCount = raw.Count,
+        EstimatedCost = (decimal)EnergyCalculator.CalculateEstimatedCost((float)raw.TotalEnergy, (float)costRate)
+    };
+}
+```
+
+## File: energy-backend.Application/Services/OrganisationService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+namespace energy_backend.Application.Services;
+public class OrganisationService(
+    IOrganisationRepository repository,
+    IEnergyAnalyticsOrchestratorService analyticsOrchestrator) : IOrganisationService
+{
+    public async Task<IEnumerable<OrganisationResponseDto>?> GetAllOrganisationsAsync(Guid userId)
+    {
+        var organisations = await repository.GetAllByUserIdAsync(userId);
+        return organisations.Select(o => new OrganisationResponseDto
+        {
+            Name = o.Name,
+            Type = o.Type,
+            EnergyBudget = o.Budget,
+            OrganisationId = o.OrganisationId,
+            DeviceCount = o.Devices?.Count ?? 0
+        });
+    }
+    public async Task<OrganisationResponseDto?> CreateOrganisationAsync(Guid userId, OrganisationRequestDto request)
+    {
+        var organisation = new Organisation
+        {
+            OrganisationId = Guid.NewGuid(),
+            Name = request.Name,
+            Type = request.Type,
+            UserId = userId,
+            Budget = request.EnergyBudget
+        };
+        await repository.AddAsync(organisation);
+        await repository.SaveChangesAsync();
+        return new OrganisationResponseDto
+        {
+            OrganisationId = organisation.OrganisationId,
+            Name = organisation.Name,
+            Type = organisation.Type,
+            EnergyBudget = organisation.Budget,
+            DeviceCount = 0
+        };
+    }
+    public async Task<OrganisationResponseDto?> UpdateOrganisationAsync(
+        Guid userId, Guid organisationId, OrganisationRequestDto request)
+    {
+        var organisation = await repository.GetByIdAsync(userId, organisationId);
+        if (organisation is null) return null;
+        organisation.Name = request.Name;
+        organisation.Type = request.Type;
+        organisation.Budget = request.EnergyBudget;
+        await repository.SaveChangesAsync();
+        return new OrganisationResponseDto
+        {
+            OrganisationId = organisation.OrganisationId,
+            Name = organisation.Name,
+            Type = organisation.Type,
+            EnergyBudget = organisation.Budget,
+            DeviceCount = organisation.Devices?.Count ?? 0
+        };
+    }
+    public async Task<bool> DeleteOrganisationAsync(Guid userId, Guid organisationId)
+    {
+        var organisation = await repository.GetByIdAsync(userId, organisationId);
+        if (organisation is null) return false;
+        await repository.DeleteAsync(organisation);
+        await repository.SaveChangesAsync();
+        return true;
+    }
+    public async Task<bool> HasOrganisationAsync(Guid userId)
+        => await repository.ExistsAsync(userId);
+    public async Task<OrganisationAnalyticsDto?> GetOrganisationAnalyticsAsync(Guid userId, Guid organisationId)
+    {
+        var organisation = await repository.GetByIdAsync(userId, organisationId);
+        if (organisation is null) return null;
+        return await analyticsOrchestrator.GetOrganisationAnalyticsAsync(organisationId);
+    }
+}
+```
+
+## File: energy-backend.Application/Services/SettingService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using energy_backend.Core.Interfaces;
+namespace energy_backend.Application.Services;
+public class SettingService(ISettingRepository repository) : ISettingService
+{
+    public async Task<SettingResponseDto> GetOrCreateAsync(Guid userId)
+    {
+        var setting = await repository.GetOrCreateAsync(userId);
+        return MapToDto(setting);
+    }
+    public async Task<SettingResponseDto> UpdateAsync(Guid userId, UpdateSettingDto dto)
+    {
+        var setting = await repository.GetOrCreateAsync(userId);
+        if (dto.ElectricityCostPerKwh.HasValue)
+        {
+            if (dto.ElectricityCostPerKwh.Value < 0)
+                throw new ArgumentException("ElectricityCostPerKwh must be non-negative.");
+            setting.ElectricityCostPerKwh = dto.ElectricityCostPerKwh.Value;
+        }
+        if (dto.PeakAlerts.HasValue) setting.PeakAlerts = dto.PeakAlerts.Value;
+        if (dto.UnusualAlerts.HasValue) setting.UnusualAlerts = dto.UnusualAlerts.Value;
+        if (dto.BudgetAlerts.HasValue) setting.BudgetAlerts = dto.BudgetAlerts.Value;
+        if (dto.RequireEmail.HasValue) setting.RequireEmail = dto.RequireEmail.Value;
+        if (dto.FavoriteOrg.HasValue) setting.FavoriteOrg = dto.FavoriteOrg.Value;
+        await repository.SaveChangesAsync();
+        return MapToDto(setting);
+    }
+    private static SettingResponseDto MapToDto(Core.Entities.Setting setting) => new()
+    {
+        ElectricityCostPerKwh = setting.ElectricityCostPerKwh,
+        PeakAlerts = setting.PeakAlerts,
+        UnusualAlerts = setting.UnusualAlerts,
+        BudgetAlerts = setting.BudgetAlerts,
+        RequireEmail = setting.RequireEmail,
+        FavoriteOrg = setting.FavoriteOrg
+    };
+}
+```
+
+## File: energy-backend.Core/Enums/DeviceType.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+namespace energy_backend.Core.Enums
+{
+    public enum DeviceType
+    {
+        HVAC,
+        Lighting,
+        EVCharger,
+        IndustrialLoad,
+        Refrigeration,
+        ITEquipment,
+        OfficeEquipment,
+        SolarPV,
+        BatteryStorage,
+        EnergyMeter,
+        Sensor,
+        Other
+    }
+}
+```
+
+## File: energy-backend.Core/Enums/TimeGranularity.cs
+```csharp
+namespace energy_backend.Core.Enums;
+public enum TimeGranularity
+{
+    Minute,
+    Hour,
+    Day,
+    Month
+}
+```
+
+## File: energy-backend.Core/Interfaces/IAggregateRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface IAggregateRepository
+{
+    Task UpsertMinuteAsync(AggregateMinuteEnergy aggregate, CancellationToken ct = default);
+    Task UpsertHourAsync(AggregateHourEnergy aggregate, CancellationToken ct = default);
+    Task UpsertDayAsync(AggregateDayEnergy aggregate, CancellationToken ct = default);
+    Task UpsertMonthAsync(AggregateMonthEnergy aggregate, CancellationToken ct = default);
+    Task<AggregateMinuteEnergy?> GetLatestMinuteAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default);
+    Task<AggregateHourEnergy?> GetLatestHourAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default);
+    Task<AggregateDayEnergy?> GetLatestDayAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default);
+    Task<AggregateMonthEnergy?> GetLatestMonthAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default);
+    Task<List<AggregateMinuteEnergy>> GetMinutesBeforeAsync(DateTime from, DateTime boundary, CancellationToken ct = default);
+    Task<List<AggregateHourEnergy>> GetHoursBeforeAsync(DateTime boundary, CancellationToken ct = default);
+    Task<List<AggregateDayEnergy>> GetDaysBeforeAsync(DateTime boundary, CancellationToken ct = default);
+    Task<bool> HourExistsAsync(Guid orgId, Guid? deviceId, DateTime hourSlot, CancellationToken ct = default);
+    Task<bool> DayExistsAsync(Guid orgId, Guid? deviceId, DateTime daySlot, CancellationToken ct = default);
+    Task<bool> MonthExistsAsync(Guid orgId, Guid? deviceId, DateTime monthSlot, CancellationToken ct = default);
+    Task AddHourAsync(AggregateHourEnergy aggregate, CancellationToken ct = default);
+    Task AddDayAsync(AggregateDayEnergy aggregate, CancellationToken ct = default);
+    Task AddMonthAsync(AggregateMonthEnergy aggregate, CancellationToken ct = default);
+    Task SaveChangesAsync(CancellationToken ct = default);
+}
+```
+
+## File: energy-backend.Core/Interfaces/IAlertEvaluationRepository.cs
+```csharp
+namespace energy_backend.Core.Interfaces;
+public interface IAlertEvaluationRepository
+{
+    Task<(DateTime? LatestTimestamp, float TotalWatts)> GetLatestMinutePowerSumAsync(
+        Guid orgId,
+        CancellationToken ct = default);
+}
+```
+
+## File: energy-backend.Core/Interfaces/IAnalyticsRepository.cs
+```csharp
+using energy_backend.Core.Enums;
+namespace energy_backend.Core.Interfaces;
+public interface IAnalyticsRepository
+{
+    IQueryable<TEntity> GetAggregateQuery<TEntity>() where TEntity : class, IEnergyAggregate;
+    Task<decimal> GetUserCostRateAsync(Guid orgId);
+    Task<List<AggregateSnapshotRow>> GetSnapshotMetricsAsync(
+        Guid orgId,
+        DateTime start,
+        DateTime end,
+        TimeGranularity granularity);
+    Task<List<DeviceSnapshotRow>> GetDeviceSnapshotMetricsAsync(
+        Guid orgId,
+        DateTime start,
+        DateTime end,
+        TimeGranularity granularity);
+    Task<List<(DateTime Timestamp, decimal TotalEnergy, double AvgWatts, double MinWatts, double MaxWatts,
+        double AvgVoltage, double TotalCurrent, double AvgPF, int Count)>> GetRawAggregateMetricsAsync(
+        Guid orgId,
+        DateTime start,
+        DateTime end,
+        TimeGranularity granularity);
+    Task<(DateTime Timestamp, decimal TotalEnergy, double AvgWatts, double MinWatts, double MaxWatts,
+        double AvgVoltage, double TotalCurrent, double AvgPF, int Count)?> GetLatestMetricSnapshotAsync(
+        Guid orgId,
+        TimeGranularity granularity);
+}
+public record AggregateSnapshotRow(
+    DateTime Timestamp,
+    float TotalEnergyKwh,
+    float AverageActivePowerWatts,
+    float AverageVoltageVolts,
+    float AverageCurrentAmps,
+    float AveragePowerFactor,
+    int DataPointsCount);
+public record DeviceSnapshotRow(
+    DateTime Timestamp,
+    string DeviceName,
+    float TotalEnergyKwh);
+```
+
+## File: energy-backend.Core/Interfaces/IDemoDataSeeder.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+namespace energy_backend.Core.Interfaces;
+public interface IDemoDataSeeder
+{
+    Task SeedHistoryForDeviceAsync(Guid deviceId);
+}
+```
+
+## File: energy-backend.Core/Interfaces/IEnergyAggregate.cs
+```csharp
+namespace energy_backend.Core.Interfaces;
+public interface IEnergyAggregate
+{
+    Guid Id { get; set; }
+    Guid OrgId { get; set; }
+    Guid? DeviceId { get; set; }
+    DateTime Timestamp { get; set; }
+    float TotalActiveEnergyKwh { get; set; }
+    float AverageActivePowerWatts { get; set; }
+    float MinActivePowerWatts { get; set; }
+    float MaxActivePowerWatts { get; set; }
+    float AverageVoltageVolts { get; set; }
+    float AverageCurrentAmps { get; set; }
+    float AveragePowerFactor { get; set; }
+    int DataPointsCount { get; set; }
+}
+```
+
+## File: energy-backend.Core/Interfaces/IEnergyRollupRepository.cs
+```csharp
+namespace energy_backend.Core.Interfaces;
+public interface IEnergyRollupRepository
+{
+    Task<List<MinuteRollupProjection>> GetRawMinuteRollupsAsync(DateTime since, CancellationToken ct = default);
+}
+public record MinuteRollupProjection(
+    Guid OrgId,
+    Guid DeviceId,
+    DateTime MinuteSlot,
+    float TotalEnergyKwh,
+    float AvgWatts,
+    float MinWatts,
+    float MaxWatts,
+    float AvgVoltage,
+    float AvgCurrent,
+    float AvgPowerFactor,
+    int Count);
+```
+
+## File: energy-backend.Core/Interfaces/ISettingRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface ISettingRepository
+{
+    Task<Setting?> GetByUserIdAsync(Guid userId);
+    Task<Setting> GetOrCreateAsync(Guid userId);
+    Task AddAsync(Setting setting);
+    Task SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Core/Services/EnergyCalculator.cs
+```csharp
+namespace energy_backend.Core.Services;
+public static class EnergyCalculator
+{
+    private const float JoulesPerKwh = 3_600_000f;
+    public static float CalculateKwhFromWatts(float watts, float intervalSeconds)
+    {
+        return (watts * intervalSeconds) / JoulesPerKwh;
+    }
+    public static float CalculateEstimatedCost(float kwh, float costRate)
+    {
+        return (float)Math.Round(kwh * costRate, 4);
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/BackgroundWorkers/HistoricalDownsamplingWorker.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.BackgroundWorkers;
+public class HistoricalDownsamplingWorker : BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<HistoricalDownsamplingWorker> _logger;
+    public HistoricalDownsamplingWorker(
+        IServiceScopeFactory scopeFactory,
+        ILogger<HistoricalDownsamplingWorker> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Historical Data Downsampling Worker started.");
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var now = DateTime.UtcNow;
+            var nextHour = now.AddHours(1).Date.AddHours(now.Hour + 1).AddMinutes(1);
+            var delay = nextHour - now;
+            if (delay.TotalMilliseconds < 0) delay = TimeSpan.FromSeconds(5);
+            _logger.LogInformation("Historical downsampler sleeping {Delay} until next hour.", delay);
+            try { await Task.Delay(delay, stoppingToken); }
+            catch (TaskCanceledException) { break; }
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var aggregateRepo = scope.ServiceProvider.GetRequiredService<IAggregateRepository>();
+                await RollupMinutesToHoursAsync(aggregateRepo, now, stoppingToken);
+                await RollupHoursToDaysAsync(aggregateRepo, now, stoppingToken);
+                await RollupDaysToMonthsAsync(aggregateRepo, now, stoppingToken);
+                _logger.LogInformation("Historical rollup chain completed.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Critical error inside historical downsampling loop.");
+            }
+        }
+    }
+    private static async Task RollupMinutesToHoursAsync(IAggregateRepository repo, DateTime now, CancellationToken ct)
+    {
+        var hourBoundary = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
+        var lookbackStart = hourBoundary.AddHours(-2);
+        var minutes = await repo.GetMinutesBeforeAsync(lookbackStart, hourBoundary, ct);
+        var groups = minutes.GroupBy(m => new
+        {
+            m.OrgId,
+            m.DeviceId,
+            HourSlot = new DateTime(m.Timestamp.Year, m.Timestamp.Month, m.Timestamp.Day, m.Timestamp.Hour, 0, 0, DateTimeKind.Utc)
+        });
+        foreach (var g in groups)
+        {
+            if (await repo.HourExistsAsync(g.Key.OrgId, g.Key.DeviceId, g.Key.HourSlot, ct)) continue;
+            await repo.AddHourAsync(Rollup<AggregateHourEnergy>(g.Key.OrgId, g.Key.DeviceId, g.Key.HourSlot, g), ct);
+        }
+        await repo.SaveChangesAsync(ct);
+    }
+    private static async Task RollupHoursToDaysAsync(IAggregateRepository repo, DateTime now, CancellationToken ct)
+    {
+        var dayBoundary = now.Date;
+        var hours = await repo.GetHoursBeforeAsync(dayBoundary, ct);
+        var groups = hours.GroupBy(h => new { h.OrgId, h.DeviceId, DaySlot = h.Timestamp.Date });
+        foreach (var g in groups)
+        {
+            if (await repo.DayExistsAsync(g.Key.OrgId, g.Key.DeviceId, g.Key.DaySlot, ct)) continue;
+            await repo.AddDayAsync(Rollup<AggregateDayEnergy>(g.Key.OrgId, g.Key.DeviceId, g.Key.DaySlot, g), ct);
+        }
+        await repo.SaveChangesAsync(ct);
+    }
+    private static async Task RollupDaysToMonthsAsync(IAggregateRepository repo, DateTime now, CancellationToken ct)
+    {
+        var monthBoundary = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var days = await repo.GetDaysBeforeAsync(monthBoundary, ct);
+        var groups = days.GroupBy(d => new
+        {
+            d.OrgId,
+            d.DeviceId,
+            MonthSlot = new DateTime(d.Timestamp.Year, d.Timestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        foreach (var g in groups)
+        {
+            if (await repo.MonthExistsAsync(g.Key.OrgId, g.Key.DeviceId, g.Key.MonthSlot, ct)) continue;
+            await repo.AddMonthAsync(Rollup<AggregateMonthEnergy>(g.Key.OrgId, g.Key.DeviceId, g.Key.MonthSlot, g), ct);
+        }
+        await repo.SaveChangesAsync(ct);
+    }
+    private static T Rollup<T>(Guid orgId, Guid? deviceId, DateTime slot, IEnumerable<IEnergyAggregate> source)
+        where T : IEnergyAggregate, new()
+    {
+        var list = source.ToList();
+        var points = list.Sum(x => x.DataPointsCount);
+        return new T
+        {
+            Id = Guid.NewGuid(),
+            OrgId = orgId,
+            DeviceId = deviceId,
+            Timestamp = slot,
+            TotalActiveEnergyKwh = list.Sum(x => x.TotalActiveEnergyKwh),
+            AverageActivePowerWatts = points > 0 ? list.Sum(x => x.AverageActivePowerWatts * x.DataPointsCount) / points : 0,
+            AverageVoltageVolts = points > 0 ? list.Sum(x => x.AverageVoltageVolts * x.DataPointsCount) / points : 0,
+            AverageCurrentAmps = points > 0 ? list.Sum(x => x.AverageCurrentAmps * x.DataPointsCount) / points : 0,
+            AveragePowerFactor = points > 0 ? list.Sum(x => x.AveragePowerFactor * x.DataPointsCount) / points : 0,
+            MinActivePowerWatts = list.Count > 0 ? list.Min(x => x.MinActivePowerWatts) : 0,
+            MaxActivePowerWatts = list.Count > 0 ? list.Max(x => x.MaxActivePowerWatts) : 0,
+            DataPointsCount = points
+        };
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/BackgroundWorkers/RecurrentDataRollupWorker.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.BackgroundWorkers;
+public class RecurrentDataRollupWorker : BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<RecurrentDataRollupWorker> _logger;
+    private static readonly TimeSpan LoopInterval = TimeSpan.FromMinutes(1);
+    public RecurrentDataRollupWorker(
+        IServiceScopeFactory scopeFactory,
+        ILogger<RecurrentDataRollupWorker> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Recurrent Data Rollup Worker started.");
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var rollupRepo = scope.ServiceProvider.GetRequiredService<IEnergyRollupRepository>();
+                var aggregateRepo = scope.ServiceProvider.GetRequiredService<IAggregateRepository>();
+                var since = DateTime.UtcNow.AddMinutes(-5);
+                var projections = await rollupRepo.GetRawMinuteRollupsAsync(since, stoppingToken);
+                foreach (var item in projections)
+                {
+                    await aggregateRepo.UpsertMinuteAsync(new AggregateMinuteEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = item.OrgId,
+                        DeviceId = item.DeviceId,
+                        Timestamp = item.MinuteSlot,
+                        TotalActiveEnergyKwh = item.TotalEnergyKwh,
+                        AverageActivePowerWatts = item.AvgWatts,
+                        MinActivePowerWatts = item.MinWatts,
+                        MaxActivePowerWatts = item.MaxWatts,
+                        AverageVoltageVolts = item.AvgVoltage,
+                        AverageCurrentAmps = item.AvgCurrent,
+                        AveragePowerFactor = item.AvgPowerFactor,
+                        DataPointsCount = item.Count
+                    }, stoppingToken);
+                }
+                if (projections.Count > 0)
+                {
+                    await aggregateRepo.SaveChangesAsync(stoppingToken);
+                    _logger.LogDebug("Rollup worker processed {Count} minute intervals.", projections.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in recurrent rollup worker.");
+            }
+            await Task.Delay(LoopInterval, stoppingToken);
+        }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/AggregateRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class AggregateRepository(EnergyDbContext context) : IAggregateRepository
+{
+    public async Task UpsertMinuteAsync(AggregateMinuteEnergy incoming, CancellationToken ct = default)
+    {
+        var existing = await context.AggregateMinuteEnergies
+            .FirstOrDefaultAsync(a => a.OrgId == incoming.OrgId
+                                   && a.DeviceId == incoming.DeviceId
+                                   && a.Timestamp == incoming.Timestamp, ct);
+        if (existing is null) context.AggregateMinuteEnergies.Add(incoming);
+        else ApplyRunningAverage(existing, incoming);
+    }
+    public async Task UpsertHourAsync(AggregateHourEnergy incoming, CancellationToken ct = default)
+    {
+        var existing = await context.AggregateHourEnergies
+            .FirstOrDefaultAsync(a => a.OrgId == incoming.OrgId
+                                   && a.DeviceId == incoming.DeviceId
+                                   && a.Timestamp == incoming.Timestamp, ct);
+        if (existing is null) context.AggregateHourEnergies.Add(incoming);
+        else ApplyRunningAverage(existing, incoming);
+    }
+    public async Task UpsertDayAsync(AggregateDayEnergy incoming, CancellationToken ct = default)
+    {
+        var existing = await context.AggregateDayEnergies
+            .FirstOrDefaultAsync(a => a.OrgId == incoming.OrgId
+                                   && a.DeviceId == incoming.DeviceId
+                                   && a.Timestamp == incoming.Timestamp, ct);
+        if (existing is null) context.AggregateDayEnergies.Add(incoming);
+        else ApplyRunningAverage(existing, incoming);
+    }
+    public async Task UpsertMonthAsync(AggregateMonthEnergy incoming, CancellationToken ct = default)
+    {
+        var existing = await context.AggregateMonthEnergies
+            .FirstOrDefaultAsync(a => a.OrgId == incoming.OrgId
+                                   && a.DeviceId == incoming.DeviceId
+                                   && a.Timestamp == incoming.Timestamp, ct);
+        if (existing is null) context.AggregateMonthEnergies.Add(incoming);
+        else ApplyRunningAverage(existing, incoming);
+    }
+    public async Task<AggregateMinuteEnergy?> GetLatestMinuteAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
+        => await context.AggregateMinuteEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
+    public async Task<AggregateHourEnergy?> GetLatestHourAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
+        => await context.AggregateHourEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
+    public async Task<AggregateDayEnergy?> GetLatestDayAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
+        => await context.AggregateDayEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
+    public async Task<AggregateMonthEnergy?> GetLatestMonthAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
+        => await context.AggregateMonthEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
+    public async Task<List<AggregateMinuteEnergy>> GetMinutesBeforeAsync(DateTime from, DateTime boundary, CancellationToken ct = default)
+        => await context.AggregateMinuteEnergies
+            .Where(m => m.Timestamp >= from && m.Timestamp < boundary)
+            .ToListAsync(ct);
+    public async Task<List<AggregateHourEnergy>> GetHoursBeforeAsync(DateTime boundary, CancellationToken ct = default)
+        => await context.AggregateHourEnergies.Where(h => h.Timestamp < boundary).ToListAsync(ct);
+    public async Task<List<AggregateDayEnergy>> GetDaysBeforeAsync(DateTime boundary, CancellationToken ct = default)
+        => await context.AggregateDayEnergies.Where(d => d.Timestamp < boundary).ToListAsync(ct);
+    public async Task<bool> HourExistsAsync(Guid orgId, Guid? deviceId, DateTime hourSlot, CancellationToken ct = default)
+        => await context.AggregateHourEnergies.AnyAsync(h => h.OrgId == orgId && h.DeviceId == deviceId && h.Timestamp == hourSlot, ct);
+    public async Task<bool> DayExistsAsync(Guid orgId, Guid? deviceId, DateTime daySlot, CancellationToken ct = default)
+        => await context.AggregateDayEnergies.AnyAsync(d => d.OrgId == orgId && d.DeviceId == deviceId && d.Timestamp == daySlot, ct);
+    public async Task<bool> MonthExistsAsync(Guid orgId, Guid? deviceId, DateTime monthSlot, CancellationToken ct = default)
+        => await context.AggregateMonthEnergies.AnyAsync(m => m.OrgId == orgId && m.DeviceId == deviceId && m.Timestamp == monthSlot, ct);
+    public async Task AddHourAsync(AggregateHourEnergy aggregate, CancellationToken ct = default)
+        => await context.AggregateHourEnergies.AddAsync(aggregate, ct);
+    public async Task AddDayAsync(AggregateDayEnergy aggregate, CancellationToken ct = default)
+        => await context.AggregateDayEnergies.AddAsync(aggregate, ct);
+    public async Task AddMonthAsync(AggregateMonthEnergy aggregate, CancellationToken ct = default)
+        => await context.AggregateMonthEnergies.AddAsync(aggregate, ct);
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+        => await context.SaveChangesAsync(ct);
+    private static void ApplyRunningAverage(IEnergyAggregate existing, IEnergyAggregate incoming)
+    {
+        var oldCount = existing.DataPointsCount;
+        var incomingCount = incoming.DataPointsCount;
+        var newCount = oldCount + incomingCount;
+        if (newCount <= 0) return;
+        existing.TotalActiveEnergyKwh += incoming.TotalActiveEnergyKwh;
+        existing.AverageActivePowerWatts =
+            ((existing.AverageActivePowerWatts * oldCount) + (incoming.AverageActivePowerWatts * incomingCount)) / newCount;
+        existing.AverageVoltageVolts =
+            ((existing.AverageVoltageVolts * oldCount) + (incoming.AverageVoltageVolts * incomingCount)) / newCount;
+        existing.AverageCurrentAmps =
+            ((existing.AverageCurrentAmps * oldCount) + (incoming.AverageCurrentAmps * incomingCount)) / newCount;
+        existing.AveragePowerFactor =
+            ((existing.AveragePowerFactor * oldCount) + (incoming.AveragePowerFactor * incomingCount)) / newCount;
+        existing.DataPointsCount = newCount;
+        if (incoming.MinActivePowerWatts < existing.MinActivePowerWatts) existing.MinActivePowerWatts = incoming.MinActivePowerWatts;
+        if (incoming.MaxActivePowerWatts > existing.MaxActivePowerWatts) existing.MaxActivePowerWatts = incoming.MaxActivePowerWatts;
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/AlertEvaluationRepository.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class AlertEvaluationRepository(EnergyDbContext context) : IAlertEvaluationRepository
+{
+    public async Task<(DateTime? LatestTimestamp, float TotalWatts)> GetLatestMinutePowerSumAsync(
+        Guid orgId,
+        CancellationToken ct = default)
+    {
+        var latestTs = await context.AggregateMinuteEnergies
+            .Where(a => a.OrgId == orgId)
+            .MaxAsync(a => (DateTime?)a.Timestamp, ct);
+        if (!latestTs.HasValue) return (null, 0f);
+        var totalWatts = await context.AggregateMinuteEnergies
+            .Where(a => a.OrgId == orgId && a.Timestamp == latestTs.Value)
+            .SumAsync(a => a.AverageActivePowerWatts, ct);
+        return (latestTs, totalWatts);
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/AnalyticsRepository.cs
+```csharp
+using energy_backend.Core.Enums;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class AnalyticsRepository(EnergyDbContext context) : IAnalyticsRepository
+{
+    public IQueryable<TEntity> GetAggregateQuery<TEntity>() where TEntity : class, IEnergyAggregate
+        => context.Set<TEntity>().AsNoTracking();
+    public async Task<decimal> GetUserCostRateAsync(Guid orgId)
+        => (decimal)await context.Organisations
+            .Where(o => o.OrganisationId == orgId)
+            .Select(o => o.EnergyCostPerKwh)
+            .FirstOrDefaultAsync();
+    public async Task<List<AggregateSnapshotRow>> GetSnapshotMetricsAsync(
+        Guid orgId, DateTime start, DateTime end, TimeGranularity granularity)
+    {
+        IQueryable<IEnergyAggregate> query = granularity switch
+        {
+            TimeGranularity.Minute => context.AggregateMinuteEnergies.AsNoTracking(),
+            TimeGranularity.Hour   => context.AggregateHourEnergies.AsNoTracking(),
+            TimeGranularity.Day    => context.AggregateDayEnergies.AsNoTracking(),
+            TimeGranularity.Month  => context.AggregateMonthEnergies.AsNoTracking(),
+            _ => throw new ArgumentOutOfRangeException(nameof(granularity))
+        };
+        return await query
+            .Where(a => a.OrgId == orgId && a.Timestamp >= start && a.Timestamp < end)
+            .OrderBy(a => a.Timestamp)
+            .Select(a => new AggregateSnapshotRow(
+                a.Timestamp,
+                a.TotalActiveEnergyKwh,
+                a.AverageActivePowerWatts,
+                a.AverageVoltageVolts,
+                a.AverageCurrentAmps,
+                a.AveragePowerFactor,
+                a.DataPointsCount))
+            .ToListAsync();
+    }
+    public async Task<List<DeviceSnapshotRow>> GetDeviceSnapshotMetricsAsync(
+        Guid orgId, DateTime start, DateTime end, TimeGranularity granularity)
+    {
+        IQueryable<IEnergyAggregate> query = granularity switch
+        {
+            TimeGranularity.Minute => context.AggregateMinuteEnergies.AsNoTracking(),
+            TimeGranularity.Hour   => context.AggregateHourEnergies.AsNoTracking(),
+            TimeGranularity.Day    => context.AggregateDayEnergies.AsNoTracking(),
+            TimeGranularity.Month  => context.AggregateMonthEnergies.AsNoTracking(),
+            _ => throw new ArgumentOutOfRangeException(nameof(granularity))
+        };
+        var rows = await query
+            .Where(a => a.OrgId == orgId && a.Timestamp >= start && a.Timestamp < end)
+            .Select(a => new { a.Timestamp, a.DeviceId, a.TotalActiveEnergyKwh })
+            .ToListAsync();
+        var deviceIds = rows.Where(r => r.DeviceId != null).Select(r => r.DeviceId).Distinct().ToList();
+        var deviceNames = await context.Devices
+            .Where(d => deviceIds.Contains(d.DeviceId))
+            .Select(d => new { d.DeviceId, d.Name })
+            .ToDictionaryAsync(d => d.DeviceId, d => d.Name);
+        return rows
+            .Where(r => r.DeviceId != null)
+            .Select(r => new DeviceSnapshotRow(
+                r.Timestamp,
+                deviceNames.TryGetValue(r.DeviceId!.Value, out var name) ? name : r.DeviceId.Value.ToString(),
+                r.TotalActiveEnergyKwh))
+            .ToList();
+    }
+    public async Task<List<(DateTime Timestamp, decimal TotalEnergy, double AvgWatts, double MinWatts,
+        double MaxWatts, double AvgVoltage, double TotalCurrent, double AvgPF, int Count)>> GetRawAggregateMetricsAsync(
+        Guid orgId,
+        DateTime start,
+        DateTime end,
+        TimeGranularity granularity)
+    {
+        IQueryable<IEnergyAggregate> query = granularity switch
+        {
+            TimeGranularity.Minute => context.AggregateMinuteEnergies.AsNoTracking(),
+            TimeGranularity.Hour => context.AggregateHourEnergies.AsNoTracking(),
+            TimeGranularity.Day => context.AggregateDayEnergies.AsNoTracking(),
+            TimeGranularity.Month => context.AggregateMonthEnergies.AsNoTracking(),
+            _ => throw new ArgumentOutOfRangeException(nameof(granularity))
+        };
+        var rows = await query
+            .Where(a => a.OrgId == orgId && a.Timestamp >= start && a.Timestamp < end)
+            .OrderBy(a => a.Timestamp)
+            .Select(a => new
+            {
+                a.Timestamp,
+                a.TotalActiveEnergyKwh,
+                a.AverageActivePowerWatts,
+                a.MinActivePowerWatts,
+                a.MaxActivePowerWatts,
+                a.AverageVoltageVolts,
+                a.AverageCurrentAmps,
+                a.AveragePowerFactor,
+                a.DataPointsCount
+            })
+            .ToListAsync();
+        return rows.Select(r => (
+            r.Timestamp,
+            (decimal)r.TotalActiveEnergyKwh,
+            (double)r.AverageActivePowerWatts,
+            (double)r.MinActivePowerWatts,
+            (double)r.MaxActivePowerWatts,
+            (double)r.AverageVoltageVolts,
+            (double)r.AverageCurrentAmps,
+            (double)r.AveragePowerFactor,
+            r.DataPointsCount
+        )).ToList();
+    }
+    public async Task<(DateTime Timestamp, decimal TotalEnergy, double AvgWatts, double MinWatts,
+        double MaxWatts, double AvgVoltage, double TotalCurrent, double AvgPF, int Count)?> GetLatestMetricSnapshotAsync(
+        Guid orgId,
+        TimeGranularity granularity)
+    {
+        IQueryable<IEnergyAggregate> query = granularity switch
+        {
+            TimeGranularity.Minute => context.AggregateMinuteEnergies.AsNoTracking(),
+            TimeGranularity.Hour => context.AggregateHourEnergies.AsNoTracking(),
+            TimeGranularity.Day => context.AggregateDayEnergies.AsNoTracking(),
+            TimeGranularity.Month => context.AggregateMonthEnergies.AsNoTracking(),
+            _ => throw new ArgumentOutOfRangeException(nameof(granularity))
+        };
+        var latest = await query
+            .Where(a => a.OrgId == orgId)
+            .OrderByDescending(a => a.Timestamp)
+            .FirstOrDefaultAsync();
+        if (latest is null) return null;
+        return (
+            latest.Timestamp,
+            (decimal)latest.TotalActiveEnergyKwh,
+            (double)latest.AverageActivePowerWatts,
+            (double)latest.MinActivePowerWatts,
+            (double)latest.MaxActivePowerWatts,
+            (double)latest.AverageVoltageVolts,
+            (double)latest.AverageCurrentAmps,
+            (double)latest.AveragePowerFactor,
+            latest.DataPointsCount
+        );
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/EnergyRollupRepository.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class EnergyRollupRepository(EnergyDbContext context) : IEnergyRollupRepository
+{
+    public async Task<List<MinuteRollupProjection>> GetRawMinuteRollupsAsync(
+        DateTime since,
+        CancellationToken ct = default)
+    {
+        return await context.EnergyReadings
+            .Where(r => r.Timestamp >= since)
+            .GroupBy(r => new
+            {
+                r.OrgId,
+                r.DeviceId,
+                MinuteSlot = new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day,
+                    r.Timestamp.Hour, r.Timestamp.Minute, 0, DateTimeKind.Utc)
+            })
+            .Select(g => new MinuteRollupProjection(
+                g.Key.OrgId,
+                g.Key.DeviceId,
+                g.Key.MinuteSlot,
+                g.Max(x => x.ActiveEnergyKwh) - g.Min(x => x.ActiveEnergyKwh),
+                g.Average(x => x.ActivePowerWatts),
+                g.Min(x => x.ActivePowerWatts),
+                g.Max(x => x.ActivePowerWatts),
+                g.Average(x => x.VoltageVolts),
+                g.Average(x => x.CurrentAmps),
+                g.Average(x => x.PowerFactor),
+                g.Count()))
+            .ToListAsync(ct);
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/SettingRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class SettingRepository(EnergyDbContext context) : ISettingRepository
+{
+    public async Task<Setting?> GetByUserIdAsync(Guid userId)
+        => await context.Settings.FirstOrDefaultAsync(s => s.UserId == userId);
+    public async Task<Setting> GetOrCreateAsync(Guid userId)
+    {
+        var setting = await context.Settings.FirstOrDefaultAsync(s => s.UserId == userId);
+        if (setting is not null) return setting;
+        setting = new Setting { UserId = userId };
+        context.Settings.Add(setting);
+        await context.SaveChangesAsync();
+        return setting;
+    }
+    public async Task AddAsync(Setting setting)
+        => await context.Settings.AddAsync(setting);
+    public async Task SaveChangesAsync()
+        => await context.SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Infrastructure/Seeding/DemoDataSeeder.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+namespace energy_backend.Infrastructure.Seeding;
+public class DemoDataSeeder(EnergyDbContext context) : IDemoDataSeeder
+{
+    public async Task SeedHistoryForDeviceAsync(Guid deviceId)
+    {
+        await SeedData.SeedDeviceHistoryAsync(context, deviceId);
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Services/AlertNotificationEvaluator.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.Services;
+public class AlertNotificationEvaluator : BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<AlertNotificationEvaluator> _logger;
+    public AlertNotificationEvaluator(
+        IServiceScopeFactory scopeFactory,
+        ILogger<AlertNotificationEvaluator> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try { await CheckAlertsAsync(stoppingToken); }
+            catch (Exception ex) { _logger.LogError(ex, "AlertNotificationEvaluator error"); }
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+        }
+    }
+    private async Task CheckAlertsAsync(CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var alertRepo = scope.ServiceProvider.GetRequiredService<IAlertRepository>();
+        var evalRepo = scope.ServiceProvider.GetRequiredService<IAlertEvaluationRepository>();
+        var alertStream = scope.ServiceProvider.GetRequiredService<IAlertStreamService>();
+        var alerts = await alertRepo.GetAllWithOrganisationsAsync();
+        foreach (var alert in alerts)
+        {
+            try
+            {
+                var (_, totalWatts) = await evalRepo.GetLatestMinutePowerSumAsync(alert.OrganisationId, ct);
+                if (totalWatts > alert.ThresholdValue && !alert.IsActive)
+                {
+                    alert.IsActive = true;
+                    alert.LastTriggeredInAppAt = DateTime.UtcNow;
+                    var evt = new AlertEvent
+                    {
+                        AlertEventId = Guid.NewGuid(),
+                        AlertId = alert.AlertId,
+                        OrganisationId = alert.OrganisationId,
+                        Name = alert.Name,
+                        ThresholdValue = alert.ThresholdValue,
+                        TriggeredValueWatts = totalWatts,
+                        TriggeredAt = DateTime.UtcNow
+                    };
+                    await alertRepo.AddEventAsync(evt);
+                    await alertRepo.SaveChangesAsync();
+                    await alertStream.NotifyAlertTriggered(alert.OrganisationId, evt);
+                    _logger.LogInformation(
+                        "Alert '{Name}' triggered at {Watts:F1} W (threshold {Threshold:F1} W)",
+                        alert.Name, totalWatts, alert.ThresholdValue);
+                }
+                else if (totalWatts < alert.ThresholdValue * 0.9f && alert.IsActive)
+                {
+                    alert.IsActive = false;
+                    await alertRepo.SaveChangesAsync();
+                    await alertStream.NotifyAlertResolved(alert.OrganisationId, alert);
+                    _logger.LogInformation("Alert '{Name}' resolved", alert.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking alert {AlertId}", alert.AlertId);
+            }
+        }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Services/LiveAlertSignalRHub.cs
+```csharp
+using System;
+using System.Threading.Tasks;
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Entities;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.Services
+{
+    public class LiveAlertSignalRHub : IAlertStreamService
+    {
+        private readonly IHubNotificationService _hubNotificationService;
+        private readonly ILogger<LiveAlertSignalRHub> _logger;
+        public LiveAlertSignalRHub(
+            IHubNotificationService hubNotificationService,
+            ILogger<LiveAlertSignalRHub> logger)
+        {
+            _hubNotificationService = hubNotificationService;
+            _logger = logger;
+        }
+        public async Task SubscribeToAlerts(string connectionId, Guid orgId)
+        {
+            var groupName = GetAlertsGroupName(orgId);
+            await _hubNotificationService.AddToAlertGroupAsync(connectionId, groupName);
+            _logger.LogInformation("Client {ConnectionId} subscribed to alerts for OrgId {OrgId}", connectionId, orgId);
+        }
+        public async Task UnsubscribeFromAlerts(string connectionId, Guid orgId)
+        {
+            var groupName = GetAlertsGroupName(orgId);
+            await _hubNotificationService.RemoveFromAlertGroupAsync(connectionId, groupName);
+            _logger.LogInformation("Client {ConnectionId} unsubscribed from alerts for OrgId {OrgId}", connectionId, orgId);
+        }
+        public async Task NotifyAlertTriggered(Guid orgId, AlertEvent alertEvent)
+        {
+            var groupName = GetAlertsGroupName(orgId);
+            await _hubNotificationService.SendAlertTriggeredAsync(groupName, alertEvent);
+            _logger.LogInformation("Alert triggered for OrgId {OrgId}: {AlertName}", orgId, alertEvent.Name);
+        }
+        public async Task NotifyAlertResolved(Guid orgId, Alert alert)
+        {
+            var groupName = GetAlertsGroupName(orgId);
+            await _hubNotificationService.SendAlertResolvedAsync(groupName, alert);
+            _logger.LogInformation("Alert resolved for OrgId {OrgId}: {AlertName}", orgId, alert.Name);
+        }
+        public async Task NotifyAlertUpdated(Guid orgId, Alert alert)
+        {
+            var groupName = GetAlertsGroupName(orgId);
+            await _hubNotificationService.SendAlertUpdatedAsync(groupName, alert);
+            _logger.LogInformation("Alert updated for OrgId {OrgId}: {AlertName}", orgId, alert.Name);
+        }
+        private string GetAlertsGroupName(Guid orgId) => $"alerts:org:{orgId}";
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Services/LiveEnergySignalRHub.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models.SignalR;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.Services;
+public class LiveEnergySignalRHub : IRealTimeDataStreamService
+{
+    private readonly IHubNotificationService _hub;
+    private readonly ILogger<LiveEnergySignalRHub> _logger;
+    public LiveEnergySignalRHub(
+        IHubNotificationService hub,
+        ILogger<LiveEnergySignalRHub> logger)
+    {
+        _hub = hub;
+        _logger = logger;
+    }
+    public async Task SubscribeToChart(string connectionId, Guid orgId, string range)
+    {
+        if (!IsValidRange(range))
+        {
+            await _hub.SendErrorAsync(connectionId, $"Invalid chart range: {range}");
+            return;
+        }
+        var groupName = GroupName(orgId, range);
+        await _hub.AddToChartGroupAsync(connectionId, groupName);
+        _logger.LogInformation("Client {ConnectionId} subscribed to {GroupName}", connectionId, groupName);
+    }
+    public async Task UnsubscribeFromChart(string connectionId, Guid orgId, string range)
+    {
+        if (!IsValidRange(range)) return;
+        await _hub.RemoveFromChartGroupAsync(connectionId, GroupName(orgId, range));
+    }
+    public async Task NotifyMinuteAggregateUpdated(Guid orgId, AggregateMinuteEnergy minuteAggregate)
+        => await SendAggregateAsync(orgId, "minute", minuteAggregate);
+    public async Task NotifyHourAggregateUpdated(Guid orgId, AggregateHourEnergy hourAggregate)
+        => await SendAggregateAsync(orgId, "hour", hourAggregate);
+    public async Task NotifyDayAggregateUpdated(Guid orgId, AggregateDayEnergy dayAggregate)
+        => await SendAggregateAsync(orgId, "day", dayAggregate);
+    public async Task NotifyMonthAggregateUpdated(Guid orgId, AggregateMonthEnergy monthAggregate)
+        => await SendAggregateAsync(orgId, "month", monthAggregate);
+    private async Task SendAggregateAsync(Guid orgId, string range, IEnergyAggregate aggregate)
+    {
+        await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, range), new RealTimeEnergyIntervalDto
+        {
+            OrgId = orgId,
+            Range = range,
+            IntervalSizeMinutes = IntervalSizeMinutes(range),
+            Sequence = DateTime.UtcNow.Ticks,
+            Version = DateTime.UtcNow.Ticks,
+            Intervals = new List<EnergyIntervalSummaryDto>
+            {
+                new()
+                {
+                    Timestamp = aggregate.Timestamp,
+                    Label = Label(aggregate.Timestamp, range),
+                    TotalEnergy = (decimal)aggregate.TotalActiveEnergyKwh,
+                    AverageWatts = aggregate.AverageActivePowerWatts,
+                    AverageVoltage = aggregate.AverageVoltageVolts,
+                    TotalCurrent = aggregate.AverageCurrentAmps,
+                    EstimatedCost = 0
+                }
+            }
+        });
+    }
+    private static string GroupName(Guid orgId, string range) => $"chart:org:{orgId}:{range}";
+    private static bool IsValidRange(string range) => range is "minute" or "hour" or "day" or "month";
+    private static int IntervalSizeMinutes(string range) => range switch
+    {
+        "minute" => 1,
+        "hour" => 60,
+        "day" => 1440,
+        "month" => 43200,
+        _ => 0
+    };
+    private static string Label(DateTime timestamp, string range) => range switch
+    {
+        "minute" => timestamp.ToString("HH:mm:ss"),
+        "hour" => timestamp.ToString("HH:mm"),
+        "day" => timestamp.ToString("ddd d"),
+        "month" => timestamp.ToString("MMM yy"),
+        _ => timestamp.ToString("O")
+    };
+}
+```
+
+## File: energy-backend.Infrastructure/Services/MockDataSimulationWorker.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using energy_backend.Core.Common;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Enums;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using energy_backend.Application.Interfaces;
+namespace energy_backend.Infrastructure.Services
+{
+    public class MockDataSimulationWorker : BackgroundService
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<MockDataSimulationWorker> _logger;
+        private readonly Random _rng = new Random();
+        private readonly Dictionary<Guid, float> _deviceBaseWatts = new();
+        private readonly Dictionary<Guid, float> _deviceBasePf = new();
+        private const float NominalVoltage = 230f;
+        public MockDataSimulationWorker(
+            IServiceScopeFactory scopeFactory,
+            ILogger<MockDataSimulationWorker> logger)
+        {
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            await DelayUntilNextSlot(stoppingToken);
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
+                    var coordinator = scope.ServiceProvider.GetRequiredService<IAggregationCoordinatorService>();
+                    var nowSlot = TimeSlots.FloorTo5sUtc(DateTime.UtcNow);
+                    var devices = await db.Devices
+                        .Include(d => d.Organisation)
+                        .AsNoTracking()
+                        .ToListAsync(stoppingToken);
+                    if (devices.Count == 0)
+                    {
+                        await DelayUntilNextSlot(stoppingToken);
+                        continue;
+                    }
+                    var existingIds = await db.EnergyReadings
+                        .AsNoTracking()
+                        .Where(r => r.Timestamp == nowSlot)
+                        .Select(r => r.DeviceId)
+                        .ToHashSetAsync(stoppingToken);
+                    var newReadings = new List<EnergyReading>();
+                    foreach (var device in devices)
+                    {
+                        if (existingIds.Contains(device.DeviceId)) continue;
+                        if (!_deviceBaseWatts.TryGetValue(device.DeviceId, out var baseW))
+                        {
+                            baseW = device.RatedPowerWatts > 0
+                                ? device.RatedPowerWatts
+                                : (float)(_rng.NextDouble() * 450.0 + 50.0);
+                            if (device.RatedPowerWatts <= 0)
+                                _logger.LogWarning(
+                                    "Device '{Name}' ({Id}) has no RatedPowerWatts; using {W:F0} W",
+                                    device.Name, device.DeviceId, baseW);
+                            _deviceBaseWatts[device.DeviceId] = baseW;
+                        }
+                        if (!_deviceBasePf.TryGetValue(device.DeviceId, out var basePf))
+                        {
+                            basePf = BasePowerFactorForDeviceType(device.Type);
+                            _deviceBasePf[device.DeviceId] = basePf;
+                        }
+                        var (activePower, voltage, current, pf) =
+                            SimulateReading(baseW, basePf, nowSlot);
+                        newReadings.Add(new EnergyReading
+                        {
+                            EnergyReadingId = Guid.NewGuid(),
+                            OrgId = device.OrganisationId,
+                            DeviceId = device.DeviceId,
+                            Timestamp = nowSlot,
+                            ActivePowerWatts = (float)Math.Round(activePower, 2),
+                            VoltageVolts = (float)Math.Round(voltage, 1),
+                            CurrentAmps = (float)Math.Round(current, 3),
+                            PowerFactor = (float)Math.Round(pf, 3),
+                            ActiveEnergyKwh = activePower * 5f / 3_600_000f
+                        });
+                    }
+                    if (newReadings.Count == 0)
+                    {
+                        await DelayUntilNextSlot(stoppingToken);
+                        continue;
+                    }
+                    await db.EnergyReadings.AddRangeAsync(newReadings, stoppingToken);
+                    await db.SaveChangesAsync(stoppingToken);
+                    _logger.LogDebug(
+                        "Simulator: {Count} readings at {Slot} — watts: {Watts}",
+                        newReadings.Count, nowSlot,
+                        string.Join(", ", newReadings.Select(r =>
+                            $"{r.ActivePowerWatts:F0}W/{r.VoltageVolts:F0}V/{r.CurrentAmps:F2}A/PF={r.PowerFactor:F2}")));
+                    var byOrg = newReadings
+                        .GroupBy(r => devices.First(d => d.DeviceId == r.DeviceId).OrganisationId);
+                    foreach (var orgGroup in byOrg)
+                    {
+                        foreach (var reading in orgGroup)
+                            await coordinator.UpsertBucketsAsync(reading);
+                        await coordinator.NotifyOrgAsync(
+                            orgGroup.First().DeviceId,
+                            orgGroup.First().Timestamp);
+                    }
+                }
+                catch (DbUpdateException ex)
+                {
+                    _logger.LogWarning(ex, "Simulator: duplicate slot; skipping.");
+                }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Simulator: unhandled error");
+                }
+                await DelayUntilNextSlot(stoppingToken);
+            }
+        }
+        private (float activePower, float voltage, float current, float pf)
+            SimulateReading(float ratedW, float basePf, DateTime utcTime)
+        {
+            var voltageNoise = (_rng.NextDouble() * 0.04) - 0.02;
+            var voltage = (float)(NominalVoltage * (1.0 + voltageNoise));
+            var hour = utcTime.Hour;
+            double loadFactor = hour switch
+            {
+                >= 0 and < 5 => 0.15,
+                >= 5 and < 7 => 0.30 + (hour - 5) * 0.15,
+                >= 7 and < 9 => 0.65 + (hour - 7) * 0.10,
+                >= 9 and < 12 => 0.85,
+                >= 12 and < 14 => 0.75,
+                >= 14 and < 17 => 0.85,
+                >= 17 and < 20 => 1.00,
+                >= 20 and < 22 => 0.80,
+                _ => 0.50
+            };
+            var powerNoise = (_rng.NextDouble() * 0.40) - 0.20;
+            var activePower = (float)Math.Max(0.0, ratedW * loadFactor * (1.0 + powerNoise));
+            var pfNoise = (_rng.NextDouble() * 0.06) - 0.03;
+            var pf = (float)Math.Clamp(basePf + pfNoise, 0.50, 1.00);
+            var current = (voltage > 0 && pf > 0)
+                ? activePower / (voltage * pf)
+                : 0f;
+            return (activePower, voltage, current, pf);
+        }
+        private static float BasePowerFactorForDeviceType(DeviceType type)
+        {
+            return type switch
+            {
+                DeviceType.HVAC or DeviceType.IndustrialLoad => 0.80f,
+                DeviceType.Refrigeration => 0.82f,
+                DeviceType.Lighting => 0.90f,
+                DeviceType.ITEquipment or DeviceType.OfficeEquipment => 0.95f,
+                DeviceType.EVCharger or DeviceType.SolarPV or DeviceType.BatteryStorage => 0.98f,
+                _ => 0.92f
+            };
+        }
+        private static async Task DelayUntilNextSlot(CancellationToken ct)
+        {
+            var now = DateTime.UtcNow;
+            var next = new DateTime(
+                now.Ticks - (now.Ticks % TimeSpan.FromSeconds(5).Ticks) + TimeSpan.FromSeconds(5).Ticks,
+                DateTimeKind.Utc);
+            var delay = next - now;
+            if (delay.TotalMilliseconds < 0) delay = TimeSpan.Zero;
+            await Task.Delay(delay, ct);
+        }
+    }
+}
+```
+
+## File: energy-backend/Controllers/SettingsController.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+namespace energy_backend.Controllers;
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class SettingsController(ISettingService settingService) : ControllerBase
+{
+    private bool TryGetUserId(out Guid userId)
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(claim, out userId);
+    }
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        var result = await settingService.GetOrCreateAsync(userId);
+        return Ok(result);
+    }
+    [HttpPatch]
+    public async Task<IActionResult> Update([FromBody] UpdateSettingDto dto)
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        try
+        {
+            var result = await settingService.UpdateAsync(userId, dto);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+}
+```
+
+## File: repomix.config.json
+```json
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "markdown",
+    "parsable": false,
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "topHeaderContent": null,
+    "showSummary": false
+  },
+  "include": [
+    "**/*.cs",
+    "**/*.json",
+    "**/*.http"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/Migrations/**",
+      "**/*.Tests/**",
+      "**/.vs/**",
+      "**/.git*/**",
+      ".gitattributes",
+      ".gitignore",
+      "*.db",
+      "*.sln",
+      "*.csproj"
+    ]
+  }
+}
+```
+
+## File: energy-backend.Application/DependencyInjection.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Services;
+using Microsoft.Extensions.DependencyInjection;
+namespace energy_backend.Application;
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IOrganisationService, OrganisationService>();
+        services.AddScoped<IDeviceService, DeviceService>();
+        services.AddScoped<IAlertService, AlertService>();
+        services.AddScoped<IAggregationService, AggregationService>();
+        services.AddScoped<IEnergyAnalyticsOrchestratorService, EnergyAnalyticsOrchestratorService>();
+        services.AddScoped<ISettingService, SettingService>();
+        return services;
+    }
+}
+```
+
+## File: energy-backend.Application/Interfaces/IAlertStreamService.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Application.Interfaces;
+public interface IAlertStreamService
+{
+    Task SubscribeToAlerts(string connectionId, Guid orgId);
+    Task UnsubscribeFromAlerts(string connectionId, Guid orgId);
+    Task NotifyAlertTriggered(Guid orgId, AlertEvent alertEvent);
+    Task NotifyAlertResolved(Guid orgId, Alert alert);
+    Task NotifyAlertUpdated(Guid orgId, Alert alert);
+}
+```
+
+## File: energy-backend.Application/Interfaces/IAuthService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IAuthService
+{
+    Task<UserResponseDto?> RegisterAsync(UserRequestDto request);
+    Task<LoginResponseDto?> LoginAsync(UserRequestDto request);
+    Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto requestDto);
+}
+```
+
+## File: energy-backend.Application/Interfaces/IDeviceService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IDeviceService
+{
+    Task<IEnumerable<DeviceResponseDto>> GetDevicesAsync(Guid userId);
+    Task<DeviceResponseDto?> GetDeviceByIdAsync(Guid userId, Guid deviceId);
+    Task<DeviceResponseDto?> CreateDeviceAsync(Guid userId, DeviceRequestDto request);
+    Task<DeviceResponseDto?> UpdateDeviceAsync(Guid userId, Guid deviceId, DeviceRequestDto request);
+    Task<bool> DeleteDeviceAsync(Guid userId, Guid deviceId);
+    Task<IEnumerable<DeviceResponseDto>> GetDevicesByOrganisationIdAsync(Guid userId, Guid organisationId);
+}
+```
+
+## File: energy-backend.Application/Interfaces/IHubNotificationService.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+using energy_backend.Application.Models.SignalR;
+namespace energy_backend.Application.Interfaces
+{
+    public interface IHubNotificationService
+    {
+        Task SendRealTimeChartUpdateAsync(string groupName, RealTimeEnergyIntervalDto data);
+        Task SendRealTimeChartCatchUpAsync(string connectionId, RealTimeEnergyIntervalDto data);
+        Task AddToChartGroupAsync(string connectionId, string groupName);
+        Task RemoveFromChartGroupAsync(string connectionId, string groupName);
+        Task SendAlertTriggeredAsync(string groupName, AlertEvent alertEvent);
+        Task SendAlertResolvedAsync(string groupName, Alert alert);
+        Task SendAlertUpdatedAsync(string groupName, Alert alert);
+        Task AddToAlertGroupAsync(string connectionId, string groupName);
+        Task RemoveFromAlertGroupAsync(string connectionId, string groupName);
+        Task AddToDeviceGroupAsync(string connectionId, string groupName);
+        Task RemoveFromDeviceGroupAsync(string connectionId, string groupName);
+        Task SendErrorAsync(string connectionId, string message);
+    }
+}
+```
+
+## File: energy-backend.Application/Interfaces/IOrganisationService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IOrganisationService
+{
+    Task<IEnumerable<OrganisationResponseDto>?> GetAllOrganisationsAsync(Guid userId);
+    Task<OrganisationResponseDto?> CreateOrganisationAsync(Guid userId, OrganisationRequestDto request);
+    Task<OrganisationResponseDto?> UpdateOrganisationAsync(Guid userId, Guid organisationId, OrganisationRequestDto request);
+    Task<bool> DeleteOrganisationAsync(Guid userId, Guid organisationId);
+    Task<bool> HasOrganisationAsync(Guid userId);
+    Task<OrganisationAnalyticsDto?> GetOrganisationAnalyticsAsync(Guid userId, Guid organisationId);
+}
+```
+
+## File: energy-backend.Application/Interfaces/IRealTimeDataStreamService.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Application.Interfaces;
+public interface IRealTimeDataStreamService
+{
+    Task SubscribeToChart(string connectionId, Guid orgId, string range);
+    Task UnsubscribeFromChart(string connectionId, Guid orgId, string range);
+    Task NotifyMinuteAggregateUpdated(Guid orgId, AggregateMinuteEnergy minuteAggregate);
+    Task NotifyHourAggregateUpdated(Guid orgId, AggregateHourEnergy hourAggregate);
+    Task NotifyDayAggregateUpdated(Guid orgId, AggregateDayEnergy dayAggregate);
+    Task NotifyMonthAggregateUpdated(Guid orgId, AggregateMonthEnergy monthAggregate);
+}
+```
+
+## File: energy-backend.Application/Models/AggregationRequestDto.cs
+```csharp
+using energy_backend.Core.Enums;
+namespace energy_backend.Application.Models
+{
+    public class AggregationRequestDto
+    {
+        public Guid OrganisationId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public TimeGranularity Granularity { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Application/Models/AggregationResultDto.cs
+```csharp
+using System.Collections.Generic;
+namespace energy_backend.Application.Models
+{
+    public class AggregationResultDto
+    {
+        public List<TimeSeriesDataPoint> DataPoints { get; set; } = new List<TimeSeriesDataPoint>();
+        public string AggregationPeriod { get; set; } = string.Empty;
+        public double TotalValue { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Application/Models/AlertRequestDto.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+namespace energy_backend.Application.Models
+{
+    public class AlertRequestDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public Guid OrganisationId { get; set; }
+        public float Threshold { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Application/Models/LoginResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class LoginResponseDto
+{
+    public required string AccessToken { get; set; }
+    public required string RefreshToken { get; set; }
+    public UserResponseDto User { get; set; } = default!;
+}
+```
+
+## File: energy-backend.Application/Models/OrganisationRequestDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class OrganisationRequestDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public float EnergyBudget { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/OrganisationResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class OrganisationResponseDto
+{
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public float EnergyBudget { get; set; }
+    public int DeviceCount { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/RefreshTokenRequestDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class RefreshTokenRequestDto
+{
+    public Guid UserId { get; set; }
+    public required string RefreshToken { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/TimeSeriesDataPoint.cs
+```csharp
+using System;
+namespace energy_backend.Application.Models
+{
+    public class TimeSeriesDataPoint
+    {
+        public DateTime Timestamp { get; set; }
+        public double Value { get; set; }
+        public string? Label { get; set; }
+        public double AverageWatts { get; set; }
+        public double AverageVoltageVolts { get; set; }
+        public double TotalCurrentAmps { get; set; }
+        public double AveragePowerFactor { get; set; }
+        public Dictionary<string, double> DeviceBreakdown { get; set; } = new();
+    }
+}
+```
+
+## File: energy-backend.Application/Models/TokenResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class TokenResponseDto
+{
+    public required string AccessToken { get; set; }
+    public required string RefreshToken { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/UserRequestDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class UserRequestDto
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+```
+
+## File: energy-backend.Core/Common/TimeSlots.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+namespace energy_backend.Core.Common
+{
+    public static class TimeSlots
+    {
+        public static DateTime FloorTo5sUtc(DateTime utcTime)
+        {
+            if (utcTime.Kind != DateTimeKind.Utc)
+                utcTime = utcTime.ToUniversalTime();
+            int seconds = utcTime.Second - (utcTime.Second % 5);
+            return new DateTime(
+                utcTime.Year,
+                utcTime.Month,
+                utcTime.Day,
+                utcTime.Hour,
+                utcTime.Minute,
+                seconds,
+                DateTimeKind.Utc
+            );
+        }
+    }
+}
+```
+
+## File: energy-backend.Core/DependencyInjection.cs
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+namespace energy_backend.Core;
+public static class DependencyInjection
+{
+    public static IServiceCollection AddCoreServices(this IServiceCollection services)
+    {
+        return services;
+    }
+}
+```
+
+## File: energy-backend.Core/Interfaces/IUserRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface IUserRepository
+{
+    Task<User?> GetByUsernameAsync(string username);
+    Task<User?> GetByIdAsync(Guid userId);
+    Task<bool> ExistsAsync(string username);
+    Task AddAsync(User user);
+    Task SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Infrastructure/DependencyInjection.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.BackgroundWorkers;
+using energy_backend.Infrastructure.Repositories;
+using energy_backend.Infrastructure.Seeding;
+using energy_backend.Infrastructure.Services;
+using Microsoft.Extensions.DependencyInjection;
+namespace energy_backend.Infrastructure;
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    {
+        services.AddScoped<IAlertRepository, AlertRepository>();
+        services.AddScoped<IDeviceRepository, DeviceRepository>();
+        services.AddScoped<IOrganisationRepository, OrganisationRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ISettingRepository, SettingRepository>();
+        services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+        services.AddScoped<IAggregateRepository, AggregateRepository>();
+        services.AddScoped<IAlertEvaluationRepository, AlertEvaluationRepository>();
+        services.AddScoped<IEnergyRollupRepository, EnergyRollupRepository>();
+        services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
+        services.AddScoped<IAggregationCoordinatorService, AggregationCoordinatorService>();
+        services.AddScoped<IRealTimeDataStreamService, LiveEnergySignalRHub>();
+        services.AddScoped<IAlertStreamService, LiveAlertSignalRHub>();
+        services.AddScoped<IHubNotificationService, HubNotificationService>();
+        services.AddHostedService<MockDataSimulationWorker>();
+        services.AddHostedService<AlertNotificationEvaluator>();
+        services.AddHostedService<RecurrentDataRollupWorker>();
+        services.AddHostedService<HistoricalDownsamplingWorker>();
+        return services;
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/UserRepository.cs
+```csharp
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories;
+public class UserRepository(EnergyDbContext context) : IUserRepository
+{
+    public async Task<User?> GetByUsernameAsync(string username)
+        => await context.Users.FirstOrDefaultAsync(u => u.Username == username);
+    public async Task<User?> GetByIdAsync(Guid userId)
+        => await context.Users.FindAsync(userId);
+    public async Task<bool> ExistsAsync(string username)
+        => await context.Users.AnyAsync(u => u.Username == username);
+    public async Task AddAsync(User user)
+        => await context.Users.AddAsync(user);
+    public async Task SaveChangesAsync()
+        => await context.SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Infrastructure/Services/HubNotificationService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models.SignalR;
+using energy_backend.Hubs;
+using energy_backend.Core.Entities;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.Services;
+public class HubNotificationService : IHubNotificationService
+{
+    private readonly IHubContext<UnifiedHub> _hubContext;
+    private readonly ILogger<HubNotificationService> _logger;
+    public HubNotificationService(
+        IHubContext<UnifiedHub> hubContext,
+        ILogger<HubNotificationService> logger)
+    {
+        _hubContext = hubContext;
+        _logger = logger;
+    }
+    public async Task SendRealTimeChartUpdateAsync(string groupName, RealTimeEnergyIntervalDto data)
+    {
+        await _hubContext.Clients.Group(groupName).SendAsync("ReceiveChartUpdate", data);
+        _logger.LogDebug("Sent chart update to group {GroupName}", groupName);
+    }
+    public async Task SendRealTimeChartCatchUpAsync(string connectionId, RealTimeEnergyIntervalDto data)
+    {
+        await _hubContext.Clients.Client(connectionId).SendAsync("ReceiveChartCatchUp", data);
+        _logger.LogDebug("Sent chart catch-up to client {ConnectionId}", connectionId);
+    }
+    public async Task AddToChartGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.AddToGroupAsync(connectionId, groupName);
+    public async Task RemoveFromChartGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.RemoveFromGroupAsync(connectionId, groupName);
+    public async Task SendAlertTriggeredAsync(string groupName, AlertEvent alertEvent)
+        => await _hubContext.Clients.Group(groupName).SendAsync("alert-triggered", alertEvent);
+    public async Task SendAlertResolvedAsync(string groupName, Alert alert)
+        => await _hubContext.Clients.Group(groupName).SendAsync("alert-resolved", alert);
+    public async Task SendAlertUpdatedAsync(string groupName, Alert alert)
+        => await _hubContext.Clients.Group(groupName).SendAsync("alert-updated", alert);
+    public async Task AddToAlertGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.AddToGroupAsync(connectionId, groupName);
+    public async Task RemoveFromAlertGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.RemoveFromGroupAsync(connectionId, groupName);
+    public async Task AddToDeviceGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.AddToGroupAsync(connectionId, groupName);
+    public async Task RemoveFromDeviceGroupAsync(string connectionId, string groupName)
+        => await _hubContext.Groups.RemoveFromGroupAsync(connectionId, groupName);
+    public async Task SendErrorAsync(string connectionId, string message)
+        => await _hubContext.Clients.Client(connectionId).SendAsync("Error", message);
+}
+```
+
+## File: energy-backend/DependencyInjection.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Application;
+using energy_backend.Core;
+using energy_backend.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+namespace energy_backend.Api
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddApiServices(this IServiceCollection services)
+        {
+            services.AddApplicationServices()
+                .AddCoreServices()
+                .AddInfrastructureServices();
+            return services;
+        }
+    }
+}
+```
+
+## File: energy-backend/Properties/launchSettings.json
+```json
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5041",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7106;http://localhost:5041",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+```
+
+## File: energy-backend.Application/Interfaces/IAggregationService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IAggregationService
+{
+    Task<AggregationResultDto> GetSnapshotAsync(AggregationRequestDto request);
+}
+```
+
+## File: energy-backend.Application/Interfaces/IAlertService.cs
+```csharp
+using energy_backend.Application.Models;
+namespace energy_backend.Application.Interfaces;
+public interface IAlertService
+{
+    Task<IEnumerable<AlertResponseDto>?> GetActiveAlertsAsync(Guid userId);
+    Task<AlertResponseDto?> CreateAlertAsync(Guid userId, AlertRequestDto request);
+    Task<bool> DeleteAlertAsync(Guid userId, Guid alertId);
+}
+```
+
+## File: energy-backend.Application/Models/AlertResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models
+{
+    public class AlertResponseDto
+    {
+        public Guid AlertId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public float Threshold { get; set; }
+        public string ThresholdUnit { get; set; } = "W";
+        public float CurrentPowerWatts { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? LastTriggeredAt { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Application/Models/DeviceRequestDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class DeviceRequestDto
+{
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public float RatedPowerWatts { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/DeviceResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class DeviceResponseDto
+{
+    public Guid DeviceId { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public float RatedPowerWatts { get; set; }
+}
+```
+
+## File: energy-backend.Application/Models/UserResponseDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class UserResponseDto
+{
+    public Guid UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+}
+```
+
+## File: energy-backend.Core/Entities/AlertEvent.cs
+```csharp
+namespace energy_backend.Core.Entities;
+public class AlertEvent
+{
+    public Guid AlertEventId { get; set; }
+    public Guid AlertId { get; set; }
+    public Guid OrganisationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public float ThresholdValue { get; set; }
+    public float TriggeredValueWatts { get; set; }
+    public DateTime TriggeredAt { get; set; }
+    public bool IsAcknowledged { get; set; }
+    public DateTime? AcknowledgedAt { get; set; }
+    public string? AcknowledgedBy { get; set; }
+    public Alert? Alert { get; set; }
+}
+```
+
+## File: energy-backend.Core/Entities/Organisation.cs
+```csharp
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class Organisation
+    {
+        [Key]
+        public Guid OrganisationId { get; set; }
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public float Budget { get; set; }
+        public float EnergyCostPerKwh { get; set; }
+        public string CurrencyCode { get; set; } = "USD";
+        public User? User { get; set; }
+        public ICollection<Device>? Devices { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/User.cs
+```csharp
+namespace energy_backend.Core.Entities
+{
+    public class User
+    {
+        public Guid UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiryTime { get; set; }
+        public ICollection<Organisation>? Organisations { get; set; }
+        public Setting? Setting { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Interfaces/IDeviceRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface IDeviceRepository
+{
+    Task<IEnumerable<Device>> GetAllByUserIdAsync(Guid userId);
+    Task<Device?> GetByIdAsync(Guid userId, Guid deviceId);
+    Task<Device?> GetByDeviceIdAsync(Guid deviceId);
+    Task<IEnumerable<Device>> GetByOrganisationIdAsync(Guid userId, Guid organisationId);
+    Task<Device?> AddAsync(Device device);
+    Task<bool> DeleteAsync(Device device);
+    Task SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Core/Interfaces/IEnergyReadingRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces
+{
+    public interface IEnergyReadingRepository
+    {
+        Task<List<EnergyReading>> GetReadingsForTodayAsync(Guid organisationId);
+        Task<List<EnergyReading>> GetReadingsForWeekAsync(Guid organisationId);
+        Task<float> GetCurrentConsumptionAsync(Guid organisationId, DateTime since);
+        Task<float> GetTodaysCostAsync(Guid organisationId, float costPerUnit);
+        Task<Dictionary<string, float>> GetDailyBreakdownByDeviceTypeAsync(Guid organisationId);
+        Task<Dictionary<string, float>> GetWeeklyBreakdownByDeviceTypeAsync(Guid organisationId);
+        Task<Dictionary<string, float>> GetHourlyBreakdownTodayAsync(Guid organisationId);
+        Task<Dictionary<string, float>> GetDailyBreakdownThisWeekAsync(Guid organisationId);
+    }
+}
+```
+
+## File: energy-backend.Core/Interfaces/IOrganisationRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface IOrganisationRepository
+{
+    Task<IEnumerable<Organisation>> GetAllByUserIdAsync(Guid userId);
+    Task<Organisation?> GetByIdAsync(Guid userId, Guid organisationId);
+    Task<Organisation?> AddAsync(Organisation organisation);
+    Task<bool> DeleteAsync(Organisation organisation);
+    Task<bool> ExistsAsync(Guid userId);
+    Task SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Infrastructure/Hubs/UnifiedHub.cs
+```csharp
+using System.Security.Claims;
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Hubs
+{
+    [Authorize]
+    public class UnifiedHub : Hub
+    {
+        private readonly IRealTimeDataStreamService _chartStream;
+        private readonly IAlertStreamService _alertStream;
+        private readonly IOrganisationRepository _orgRepo;
+        private readonly ILogger<UnifiedHub> _logger;
+        public UnifiedHub(
+            IRealTimeDataStreamService chartStream,
+            IAlertStreamService alertStream,
+            IOrganisationRepository orgRepo,
+            ILogger<UnifiedHub> logger)
+        {
+            _chartStream = chartStream;
+            _alertStream = alertStream;
+            _orgRepo = orgRepo;
+            _logger = logger;
+        }
+        public override async Task OnConnectedAsync()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                _logger.LogWarning("UnifiedHub: connection {Id} has no valid user claim", Context.ConnectionId);
+                Context.Abort();
+                return;
+            }
+            await base.OnConnectedAsync();
+            _logger.LogInformation("UnifiedHub: user {UserId} connected ({ConnId})", userId, Context.ConnectionId);
+        }
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            await base.OnDisconnectedAsync(exception);
+            _logger.LogInformation("UnifiedHub: connection {ConnId} disconnected", Context.ConnectionId);
+        }
+        public async Task SubscribeToChart(Guid orgId, string range)
+        {
+            if (!await AuthorizeOrg(orgId)) return;
+            await _chartStream.SubscribeToChart(Context.ConnectionId, orgId, range);
+        }
+        public async Task UnsubscribeFromChart(Guid orgId, string range)
+        {
+            if (!await AuthorizeOrg(orgId)) return;
+            await _chartStream.UnsubscribeFromChart(Context.ConnectionId, orgId, range);
+        }
+        public async Task SubscribeToAlerts(Guid orgId)
+        {
+            if (!await AuthorizeOrg(orgId)) return;
+            await _alertStream.SubscribeToAlerts(Context.ConnectionId, orgId);
+        }
+        public async Task UnsubscribeFromAlerts(Guid orgId)
+        {
+            if (!await AuthorizeOrg(orgId)) return;
+            await _alertStream.UnsubscribeFromAlerts(Context.ConnectionId, orgId);
+        }
+        private Guid? GetUserId()
+        {
+            var claim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(claim, out var id) ? id : null;
+        }
+        private async Task<bool> AuthorizeOrg(Guid orgId)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                await Clients.Caller.SendAsync("Error", "Unauthorized");
+                return false;
+            }
+            var org = await _orgRepo.GetByIdAsync(userId.Value, orgId);
+            if (org == null)
+            {
+                await Clients.Caller.SendAsync("Error", $"Organization {orgId} not found or not owned by you");
+                return false;
+            }
+            return true;
+        }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/DeviceRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories
+{
+    public class DeviceRepository(EnergyDbContext context): IDeviceRepository
+    {
+        public async Task<IEnumerable<Device>> GetAllByUserIdAsync(Guid userId)
+        {
+            return await context.Devices
+                .Where(d => d.Organisation!.UserId == userId)
+                .ToListAsync();
+        }
+        public async Task<Device?> GetByIdAsync(Guid userId, Guid deviceId)
+        {
+            return await context.Devices
+                .Include(d => d.Organisation)
+                .FirstOrDefaultAsync(d => d.DeviceId == deviceId && d.Organisation!.UserId == userId);
+        }
+        public async Task<Device?> GetByDeviceIdAsync(Guid deviceId)
+        {
+            return await context.Devices
+                .Include(d => d.Organisation)
+                .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
+        }
+        public async Task<IEnumerable<Device>> GetByOrganisationIdAsync(Guid userId, Guid organisationId)
+        {
+            var organisation = await context.Organisations
+                .Include(o => o.Devices)
+                .FirstOrDefaultAsync(o => o.OrganisationId == organisationId && o.UserId == userId);
+            return organisation?.Devices ?? Enumerable.Empty<Device>();
+        }
+        public async Task<Device?> AddAsync(Device device)
+        {
+            await context.Devices.AddAsync(device);
+            return device;
+        }
+        public async Task<bool> DeleteAsync(Device device)
+        {
+            context.Devices.Remove(device);
+            return true;
+        }
+        public async Task SaveChangesAsync()
+        {
+            await context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/OrganisationRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories
+{
+    public class OrganisationRepository(EnergyDbContext context) : IOrganisationRepository
+    {
+        public async Task<IEnumerable<Organisation>> GetAllByUserIdAsync(Guid userId)
+        {
+            return await context.Organisations
+                .Where(o => o.UserId == userId)
+                .Include(o => o.Devices)
+                .ToListAsync();
+        }
+        public async Task<Organisation?> GetByIdAsync(Guid userId, Guid organisationId)
+        {
+            return await context.Organisations
+                .Include(o => o.Devices)
+                .FirstOrDefaultAsync(o => o.OrganisationId == organisationId && o.UserId == userId);
+        }
+        public async Task<Organisation?> AddAsync(Organisation organisation)
+        {
+            await context.Organisations.AddAsync(organisation);
+            return organisation;
+        }
+        public async Task<bool> DeleteAsync(Organisation organisation)
+        {
+            context.Organisations.Remove(organisation);
+            return true;
+        }
+        public async Task<bool> ExistsAsync(Guid userId)
+        {
+            return await context.Organisations.AnyAsync(o => o.UserId == userId);
+        }
+        public async Task SaveChangesAsync()
+        {
+            await context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+## File: energy-backend/appsettings.Development.json
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning", // Added to suppress EF Core spam
+      "energy_backend.Infrastructure.Services": "Debug",
+      "energy_backend.Application.Services": "Debug"
+    }
+  }
+}
+```
+
+## File: energy-backend/Controllers/AlertsController.cs
+```csharp
+using System.Security.Claims;
+using energy_backend.Application.Models;
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+namespace energy_backend.Controllers
+{
+    [Authorize]
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AlertsController(IAlertService alertService) : ControllerBase
+    {
+        [HttpGet]
+        public async Task<ActionResult<List<AlertResponseDto>>> GetActiveAlerts()
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var alerts = await alertService.GetActiveAlertsAsync(userId);
+            return alerts is null ? BadRequest("Error fetching alerts") : Ok(alerts);
+        }
+        [HttpPost]
+        public async Task<ActionResult<AlertResponseDto>> CreateAlert([FromBody] AlertRequestDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Name) || (request.Threshold) == 0)
+                return BadRequest("Alert name and threshold are required.");
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var org = await alertService.CreateAlertAsync(userId, request);
+            return org is null ? BadRequest("Error creating organisation") : Ok(org);
+        }
+        [HttpDelete("{alertId}")]
+        public async Task<ActionResult<bool>> DeleteAlert(Guid alertId)
+        {
+            if (alertId == Guid.Empty)
+                return BadRequest("Invalid Alert ID.");
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var deleted = await alertService.DeleteAlertAsync(userId, alertId);
+            return deleted ? Ok(true) : NotFound("Alert not found");
+        }
+        private bool TryGetUserId(out Guid userId)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out userId);
+        }
+    }
+}
+```
+
+## File: energy-backend/Controllers/DeviceController.cs
+```csharp
+using System.Security.Claims;
+using energy_backend.Application.Models;
+using energy_backend.Infrastructure.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using energy_backend.Application.Interfaces;
+namespace energy_backend.Controllers
+{
+    [Authorize]
+    [Route("api/[controller]")]
+    [ApiController]
+    public class DeviceController(IDeviceService deviceService) : ControllerBase
+    {
+        private Guid? GetUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out var id) ? id : null;
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var devices = await deviceService.GetDevicesAsync(userId.Value);
+            return Ok(devices);
+        }
+        [HttpGet("byOrganisation/{orgId}")]
+        public async Task<IActionResult> GetByOrganisationId(Guid orgId)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var devices = await deviceService.GetDevicesByOrganisationIdAsync(userId.Value, orgId);
+            return Ok(devices);
+        }
+        [HttpGet("byOrganisation/{orgId}/paged")]
+        public async Task<IActionResult> GetByOrganisationIdPaged(
+            Guid orgId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 100) pageSize = 10;
+            var all = (await deviceService.GetDevicesByOrganisationIdAsync(userId.Value, orgId)).ToList();
+            var total = all.Count;
+            var items = all
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            return Ok(new
+            {
+                items,
+                total,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)total / pageSize)
+            });
+        }
+        [HttpGet("{deviceId}")]
+        public async Task<IActionResult> GetById(Guid deviceId)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var device = await deviceService.GetDeviceByIdAsync(userId.Value, deviceId);
+            if (device == null) return NotFound();
+            return Ok(device);
+        }
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] DeviceRequestDto request)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var device = await deviceService.CreateDeviceAsync(userId.Value, request);
+            if (device == null) return BadRequest("Invalid organisation or data.");
+            return Ok(device);
+        }
+        [HttpPut("{deviceId}")]
+        public async Task<IActionResult> Update(Guid deviceId, [FromBody] DeviceRequestDto request)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var device = await deviceService.UpdateDeviceAsync(userId.Value, deviceId, request);
+            if (device == null) return NotFound();
+            return Ok(device);
+        }
+        [HttpDelete("{deviceId}")]
+        public async Task<IActionResult> Delete(Guid deviceId)
+        {
+            var userId = GetUserId();
+            if (userId == null) return Unauthorized("Invalid user.");
+            var success = await deviceService.DeleteDeviceAsync(userId.Value, deviceId);
+            return success ? Ok() : NotFound();
+        }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/AggregateDayEnergy.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using System;
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class AggregateDayEnergy : IEnergyAggregate
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid OrgId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public DateTime Timestamp { get; set; }
+        public float TotalActiveEnergyKwh { get; set; }
+        public float AverageActivePowerWatts { get; set; }
+        public float MinActivePowerWatts { get; set; }
+        public float MaxActivePowerWatts { get; set; }
+        public float AverageVoltageVolts { get; set; }
+        public float AverageCurrentAmps { get; set; }
+        public float AveragePowerFactor { get; set; }
+        public int DataPointsCount { get; set; }
+        public float EstimatedCost { get; set; }
+        public Device? Device { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/AggregateHourEnergy.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using System;
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class AggregateHourEnergy : IEnergyAggregate
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid OrgId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public DateTime Timestamp { get; set; }
+        public float TotalActiveEnergyKwh { get; set; }
+        public float AverageActivePowerWatts { get; set; }
+        public float MinActivePowerWatts { get; set; }
+        public float MaxActivePowerWatts { get; set; }
+        public float AverageVoltageVolts { get; set; }
+        public float AverageCurrentAmps { get; set; }
+        public float AveragePowerFactor { get; set; }
+        public int DataPointsCount { get; set; }
+        public float EstimatedCost { get; set; }
+        public Device? Device { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/AggregateMinuteEnergy.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using System;
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class AggregateMinuteEnergy : IEnergyAggregate
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid OrgId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public DateTime Timestamp { get; set; }
+        public float TotalActiveEnergyKwh { get; set; }
+        public float AverageActivePowerWatts { get; set; }
+        public float MinActivePowerWatts { get; set; }
+        public float MaxActivePowerWatts { get; set; }
+        public float AverageVoltageVolts { get; set; }
+        public float AverageCurrentAmps { get; set; }
+        public float AveragePowerFactor { get; set; }
+        public int DataPointsCount { get; set; }
+        public float EstimatedCost { get; set; }
+        public Device? Device { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/AggregateMonthEnergy.cs
+```csharp
+using energy_backend.Core.Interfaces;
+using System;
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class AggregateMonthEnergy : IEnergyAggregate
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid OrgId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public DateTime Timestamp { get; set; }
+        public float TotalActiveEnergyKwh { get; set; }
+        public float AverageActivePowerWatts { get; set; }
+        public float MinActivePowerWatts { get; set; }
+        public float MaxActivePowerWatts { get; set; }
+        public float AverageVoltageVolts { get; set; }
+        public float AverageCurrentAmps { get; set; }
+        public float AveragePowerFactor { get; set; }
+        public int DataPointsCount { get; set; }
+        public float EstimatedCost { get; set; }
+        public Device? Device { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/Device.cs
+```csharp
+using energy_backend.Core.Enums;
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class Device
+    {
+        [Key]
+        public Guid DeviceId { get; set; }
+        public Guid OrganisationId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public DeviceType Type { get; set; }
+        public string? Description { get; set; }
+        public float RatedPowerWatts { get; set; }
+        public Organisation? Organisation { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/Setting.cs
+```csharp
+namespace energy_backend.Core.Entities
+{
+    public class Setting
+    {
+        public Guid SettingId { get; set; }
+        public Guid UserId { get; set; }
+        public Guid FavoriteOrg { get; set; } = Guid.Empty;
+        public bool PeakAlerts { get; set; } = false;
+        public bool UnusualAlerts { get; set; } = false;
+        public bool BudgetAlerts { get; set; } = true;
+        public bool RequireEmail { get; set; } = true;
+        public float ElectricityCostPerKwh { get; set; } = 0.28f;
+        public User? User { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Core/Interfaces/IAlertRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+namespace energy_backend.Core.Interfaces;
+public interface IAlertRepository
+{
+    Task<IEnumerable<Alert>> GetByUserIdAsync(Guid userId);
+    Task<Alert?> GetByIdAsync(Guid userId, Guid alertId);
+    Task<List<Alert>> GetAllWithOrganisationsAsync();
+    Task AddAsync(Alert alert);
+    Task AddEventAsync(AlertEvent alertEvent);
+    Task DeleteAsync(Alert alert);
+    Task SaveChangesAsync();
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/AlertRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories
+{
+    public class AlertRepository(EnergyDbContext context): IAlertRepository
+    {
+        public async Task<IEnumerable<Alert>> GetByUserIdAsync(Guid userId)
+        {
+            return await context.Alerts
+                .Include(a => a.Organisation)
+                    .ThenInclude(o => o!.Devices)
+                .Where(a => a.Organisation!.UserId == userId)
+                .ToListAsync();
+        }
+        public async Task<Alert?> GetByIdAsync(Guid userId, Guid alertId)
+        {
+            return await context.Alerts
+                .Include(a => a.Organisation)
+                .FirstOrDefaultAsync(a =>
+                    a.AlertId == alertId &&
+                    a.Organisation!.UserId == userId);
+        }
+        public async Task<List<Alert>> GetAllWithOrganisationsAsync()
+        {
+            return await context.Alerts
+                .Include(a => a.Organisation)
+                .ToListAsync();
+        }
+        public async Task AddAsync(Alert alert)
+        {
+            await context.Alerts.AddAsync(alert);
+        }
+        public async Task AddEventAsync(AlertEvent alertEvent)
+        {
+            await context.AlertEvents.AddAsync(alertEvent);
+        }
+        public async Task DeleteAsync(Alert alert)
+        {
+            context.Alerts.Remove(alert);
+        }
+        public async Task SaveChangesAsync()
+        {
+            await context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+## File: energy-backend/appsettings.json
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost\\SQLExpress;Database=EnergyDb;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Error",
+      "Microsoft.AspNetCore": "Error"
+    }
+  },
+  "AppSettings": {
+    "Issuer": "http://localhost:5173",
+    "Audience": "http://localhost:5173"
+  },
+  "EnergySettings": {
+    "CostPerKwh": 0.28,
+    "CarbonKgPerKwh": 0.233
+  },
+  "AllowedHosts": "*"
+}
+```
+
+## File: energy-backend/Controllers/AuthController.cs
+```csharp
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using energy_backend.Core.Entities;
+using energy_backend.Application.Models;
+using energy_backend.Infrastructure.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using energy_backend.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+namespace energy_backend.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController(IAuthService authService) : ControllerBase
+    {
+        [HttpPost]
+        [Route("register")]
+        public async Task<ActionResult<UserResponseDto>> Register(UserRequestDto request)
+        {
+            var user = await authService.RegisterAsync(request);
+            if (user is null)
+            {
+                return BadRequest("Username already exists");
+            }
+            return Ok(user);
+        }
+        [HttpPost]
+        [Route("login")]
+        public async Task<ActionResult<TokenResponseDto>> Login(UserRequestDto request)
+        {
+            var response = await authService.LoginAsync(request);
+            if (response is null)
+            {
+                return BadRequest("Invalid credentials");
+            }
+            return Ok(response);
+        }
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<TokenResponseDto>> RefreshToken(RefreshTokenRequestDto request)
+        {
+            var response = await authService.RefreshTokenAsync(request);
+            if (response is null || response.AccessToken is null || response.RefreshToken is null)
+            {
+                return Unauthorized("Invalid refresh token");
+            }
+            return Ok(response);
+        }
+    }
+}
+```
+
+## File: energy-backend/Controllers/OrganisationController.cs
+```csharp
+using System.Security.Claims;
+using energy_backend.Application.Models;
+using energy_backend.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+namespace energy_backend.Controllers
+{
+    [Authorize]
+    [Route("api/[controller]")]
+    [ApiController]
+    public class OrganisationController(IOrganisationService orgService) : ControllerBase
+    {
+        [HttpGet]
+        public async Task<ActionResult<List<OrganisationResponseDto>>> GetAllOrganisations()
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var orgs = await orgService.GetAllOrganisationsAsync(userId);
+            return orgs is null ? BadRequest("Error fetching organisations") : Ok(orgs);
+        }
+        [HttpPost]
+        public async Task<ActionResult<OrganisationResponseDto>> CreateOrganisation([FromBody] OrganisationRequestDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type))
+                return BadRequest("Organisation name and type are required.");
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var org = await orgService.CreateOrganisationAsync(userId, request);
+            return org is null ? BadRequest("Error creating organisation") : Ok(org);
+        }
+        [HttpPut("{organisationId}")]
+        public async Task<ActionResult<OrganisationResponseDto>> UpdateOrganisation(Guid organisationId, [FromBody] OrganisationRequestDto request)
+        {
+            if (request == null || organisationId == Guid.Empty)
+                return BadRequest("Invalid organisation data.");
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var updatedOrg = await orgService.UpdateOrganisationAsync(userId, organisationId, request);
+            return updatedOrg is null ? NotFound("Organisation not found") : Ok(updatedOrg);
+        }
+        [HttpDelete("{organisationId}")]
+        public async Task<ActionResult<bool>> DeleteOrganisation(Guid organisationId)
+        {
+            if (organisationId == Guid.Empty)
+                return BadRequest("Invalid organisation ID.");
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            var deleted = await orgService.DeleteOrganisationAsync(userId, organisationId);
+            return deleted ? Ok(true) : NotFound("Organisation not found");
+        }
+        [HttpGet("HasOrganisation")]
+        public async Task<ActionResult<bool>> HasOrganisation()
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            try
+            {
+                var hasOrganisation = await orgService.HasOrganisationAsync(userId);
+                return Ok(hasOrganisation);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpGet("GetOrganisationAnalytics/{organisationId}")]
+        public async Task<ActionResult<OrganisationAnalyticsDto>> GetOrganisationAnalytics(Guid organisationId)
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+            try
+            {
+                var organisationAnalytics = await orgService.GetOrganisationAnalyticsAsync(userId, organisationId);
+                return Ok(organisationAnalytics);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        private bool TryGetUserId(out Guid userId)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdClaim, out userId);
+        }
+    }
+}
+```
+
+## File: energy-backend.Application/Interfaces/IAggregationCoordinatorService.cs
+```csharp
+using energy_backend.Core.Entities;
+namespace energy_backend.Application.Interfaces;
+public interface IAggregationCoordinatorService
+    {
+        Task UpsertBucketsAsync(EnergyReading reading);
+        Task NotifyOrgAsync(Guid deviceId, DateTime slotTimestamp);
+    }
+```
+
+## File: energy-backend.Application/Models/OrganisationAnalyticsDto.cs
+```csharp
+namespace energy_backend.Application.Models;
+public class OrganisationAnalyticsDto
+{
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public List<EnergyMetricRollupDto> MinuteRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> HourRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> DayRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> MonthRollups { get; set; } = new();
+}
+```
+
+## File: energy-backend.Core/Entities/Alert.cs
+```csharp
+namespace energy_backend.Core.Entities
+{
+    public class Alert
+    {
+        public Guid AlertId { get; set; }
+        public Guid OrganisationId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public float ThresholdValue { get; set; }
+        public bool IsActive { get; set; }
+        public bool EmailEnabled { get; set; } = true;
+        public bool InAppNotificationEnabled { get; set; } = true;
+        public float InAppCooldownMinutes { get; set; } = 60;
+        public float EmailCooldownMinutes { get; set; } = 1440;
+        public DateTime? LastTriggeredInAppAt { get; set; }
+        public DateTime? LastTriggeredEmailAt { get; set; }
+        public Organisation? Organisation { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Repositories/EnergyReadingRepository.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using energy_backend.Core.Interfaces;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Repositories
+{
+    public class EnergyReadingRepository(EnergyDbContext context) : IEnergyReadingRepository
+    {
+        public async Task<List<EnergyReading>> GetReadingsForTodayAsync(Guid organisationId)
+        {
+            var startOfToday = DateTime.UtcNow.Date;
+            return await context.EnergyReadings
+                .Include(r => r.Device)
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
+                .ToListAsync();
+        }
+        public async Task<List<EnergyReading>> GetReadingsForWeekAsync(Guid organisationId)
+        {
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
+            return await context.EnergyReadings
+                .Include(r => r.Device)
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
+                .ToListAsync();
+        }
+        public async Task<float> GetCurrentConsumptionAsync(Guid organisationId, DateTime since)
+        {
+            return await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= since)
+                .SumAsync(r => r.ActivePowerWatts);
+        }
+        public async Task<float> GetTodaysCostAsync(Guid organisationId, float costPerUnit)
+        {
+            var readingsToday = await GetReadingsForTodayAsync(organisationId);
+            return (float)Math.Round(readingsToday.Sum(x => x.ActivePowerWatts * costPerUnit), 2);
+        }
+        public async Task<Dictionary<string, float>> GetDailyBreakdownByDeviceTypeAsync(Guid organisationId)
+        {
+            var startOfToday = DateTime.UtcNow.Date;
+            return await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
+                .GroupBy(r => r.Device!.Type)
+                .ToDictionaryAsync(g => g.Key.ToString(), g => g.Sum(r => r.ActivePowerWatts));
+        }
+        public async Task<Dictionary<string, float>> GetWeeklyBreakdownByDeviceTypeAsync(Guid organisationId)
+        {
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
+            return await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
+                .GroupBy(r => r.Device!.Type)
+                .ToDictionaryAsync(g => g.Key.ToString(), g => g.Sum(r => r.ActivePowerWatts));
+        }
+        public async Task<Dictionary<string, float>> GetHourlyBreakdownTodayAsync(Guid organisationId)
+        {
+            var startOfToday = DateTime.UtcNow.Date;
+            var rows = await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfToday)
+                .GroupBy(r => r.Timestamp.Hour)
+                .Select(g => new { Hour = g.Key, Total = g.Sum(r => r.ActivePowerWatts) })
+                .OrderBy(g => g.Hour)
+                .ToListAsync();
+            return rows.ToDictionary(g => $"{g.Hour}:00", g => g.Total);
+        }
+        public async Task<Dictionary<string, float>> GetDailyBreakdownThisWeekAsync(Guid organisationId)
+        {
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-6);
+            var rows = await context.EnergyReadings
+                .Where(r => r.OrgId == organisationId && r.Timestamp >= startOfWeek)
+                .GroupBy(r => r.Timestamp.Date)
+                .Select(g => new { Day = g.Key, Total = g.Sum(r => r.ActivePowerWatts) })
+                .OrderBy(g => g.Day)
+                .ToListAsync();
+            return rows.ToDictionary(g => g.Day.ToString("ddd"), g => g.Total);
+        }
+    }
+}
+```
+
+## File: energy-backend/Controllers/EnergyController.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+namespace energy_backend.Controllers;
+[Route("api/[controller]")]
+[ApiController]
+public class EnergyController(IAggregationService aggregationService) : ControllerBase
+{
+    [Authorize]
+    [HttpPost("snapshot")]
+    public async Task<ActionResult<AggregationResultDto>> GetSnapshot([FromBody] AggregationRequestDto request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var result = await aggregationService.GetSnapshotAsync(request);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "Error retrieving snapshot data.");
+        }
+    }
+}
+```
+
+## File: energy-backend.Core/Entities/EnergyReading.cs
+```csharp
+using System.ComponentModel.DataAnnotations;
+namespace energy_backend.Core.Entities
+{
+    public class EnergyReading
+    {
+        [Key]
+        public Guid EnergyReadingId { get; set; }
+        public Guid OrgId { get; set; }
+        public Guid DeviceId { get; set; }
+        public DateTime Timestamp { get; set; }
+        public float ActivePowerWatts { get; set; }
+        public float VoltageVolts { get; set; }
+        public float CurrentAmps { get; set; }
+        public float PowerFactor { get; set; }
+        public float ActiveEnergyKwh { get; set; }
+        public Device? Device { get; set; }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Data/EnergyDbContext.cs
+```csharp
+using energy_backend.Core.Entities;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Data
+{
+    public class EnergyDbContext(DbContextOptions<EnergyDbContext> options) : DbContext(options)
+    {
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Organisation> Organisations => Set<Organisation>();
+        public DbSet<Device> Devices => Set<Device>();
+        public DbSet<Setting> Settings => Set<Setting>();
+        public DbSet<Alert> Alerts => Set<Alert>();
+        public DbSet<EnergyReading> EnergyReadings => Set<EnergyReading>();
+        public DbSet<AlertEvent> AlertEvents => Set<AlertEvent>();
+        public DbSet<AggregateMinuteEnergy> AggregateMinuteEnergies => Set<AggregateMinuteEnergy>();
+        public DbSet<AggregateHourEnergy> AggregateHourEnergies => Set<AggregateHourEnergy>();
+        public DbSet<AggregateDayEnergy> AggregateDayEnergies => Set<AggregateDayEnergy>();
+        public DbSet<AggregateMonthEnergy> AggregateMonthEnergies => Set<AggregateMonthEnergy>();
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<EnergyReading>()
+                .HasIndex(e => new { e.DeviceId, e.Timestamp })
+                .IsUnique();
+            modelBuilder.Entity<EnergyReading>()
+                .HasIndex(e => new { e.Timestamp, e.DeviceId });
+            modelBuilder.Entity<AggregateMinuteEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+            modelBuilder.Entity<AggregateHourEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+            modelBuilder.Entity<AggregateDayEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+            modelBuilder.Entity<AggregateMonthEnergy>(entity =>
+            {
+                entity.HasIndex(a => new { a.DeviceId, a.Timestamp }).IsUnique();
+                entity.HasIndex(a => new { a.OrgId, a.Timestamp });
+                entity.HasOne(a => a.Device)
+                    .WithMany()
+                    .HasForeignKey(a => a.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<Organisation>()
+                    .WithMany()
+                    .HasForeignKey(a => a.OrgId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+        }
+    }
+}
+```
+
+## File: energy-backend.Infrastructure/Services/AggregationCoordinatorService.cs
+```csharp
+using energy_backend.Application.Interfaces;
+using energy_backend.Core.Entities;
+using energy_backend.Core.Interfaces;
+using energy_backend.Core.Services;
+using Microsoft.Extensions.Logging;
+namespace energy_backend.Infrastructure.Services;
+public class AggregationCoordinatorService : IAggregationCoordinatorService
+{
+    private readonly IAggregateRepository _aggregates;
+    private readonly IDeviceRepository _devices;
+    private readonly IRealTimeDataStreamService _stream;
+    private readonly ILogger<AggregationCoordinatorService> _logger;
+    private const float ReadingIntervalSeconds = 5f;
+    public AggregationCoordinatorService(
+        IAggregateRepository aggregates,
+        IDeviceRepository devices,
+        IRealTimeDataStreamService stream,
+        ILogger<AggregationCoordinatorService> logger)
+    {
+        _aggregates = aggregates;
+        _devices = devices;
+        _stream = stream;
+        _logger = logger;
+    }
+    public async Task UpsertBucketsAsync(EnergyReading reading)
+    {
+        var device = reading.Device ?? await _devices.GetByDeviceIdAsync(reading.DeviceId);
+        if (device is null)
+        {
+            _logger.LogWarning("Device {DeviceId} not found; skipping reading.", reading.DeviceId);
+            return;
+        }
+        var orgId = device.OrganisationId;
+        if (orgId == Guid.Empty) return;
+        var watts = reading.ActivePowerWatts;
+        var volts = reading.VoltageVolts;
+        var amps = reading.CurrentAmps;
+        var pf = reading.PowerFactor;
+        var kwh = EnergyCalculator.CalculateKwhFromWatts(watts, ReadingIntervalSeconds);
+        await _aggregates.UpsertMinuteAsync(Build<AggregateMinuteEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Minute), watts, volts, amps, pf, kwh));
+        await _aggregates.UpsertHourAsync(Build<AggregateHourEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Hour), watts, volts, amps, pf, kwh));
+        await _aggregates.UpsertDayAsync(Build<AggregateDayEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Day), watts, volts, amps, pf, kwh));
+        await _aggregates.UpsertMonthAsync(Build<AggregateMonthEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Month), watts, volts, amps, pf, kwh));
+        await _aggregates.SaveChangesAsync();
+    }
+    public async Task NotifyOrgAsync(Guid deviceId, DateTime slotTimestamp)
+    {
+        var device = await _devices.GetByDeviceIdAsync(deviceId);
+        if (device is null) return;
+        var orgId = device.OrganisationId;
+        var minuteBucket = Bucket(slotTimestamp, BucketSize.Minute);
+        var hourBucket = Bucket(slotTimestamp, BucketSize.Hour);
+        var dayBucket = Bucket(slotTimestamp, BucketSize.Day);
+        var monthBucket = Bucket(slotTimestamp, BucketSize.Month);
+        var minuteRow = await _aggregates.GetLatestMinuteAsync(orgId, minuteBucket);
+        if (minuteRow is not null)
+            await _stream.NotifyMinuteAggregateUpdated(orgId, minuteRow);
+        if (slotTimestamp.Minute == 0)
+        {
+            var hourRow = await _aggregates.GetLatestHourAsync(orgId, hourBucket);
+            if (hourRow is not null)
+                await _stream.NotifyHourAggregateUpdated(orgId, hourRow);
+        }
+        if (slotTimestamp is { Hour: 0, Minute: 0 })
+        {
+            var dayRow = await _aggregates.GetLatestDayAsync(orgId, dayBucket);
+            if (dayRow is not null)
+                await _stream.NotifyDayAggregateUpdated(orgId, dayRow);
+            var monthRow = await _aggregates.GetLatestMonthAsync(orgId, monthBucket);
+            if (monthRow is not null)
+                await _stream.NotifyMonthAggregateUpdated(orgId, monthRow);
+        }
+    }
+    private static T Build<T>(Guid orgId, Guid deviceId, DateTime ts,
+        float watts, float volts, float amps, float pf, float kwh)
+        where T : IEnergyAggregate, new() => new()
+    {
+        Id = Guid.NewGuid(),
+        OrgId = orgId,
+        DeviceId = deviceId,
+        Timestamp = ts,
+        TotalActiveEnergyKwh = kwh,
+        AverageActivePowerWatts = watts,
+        MinActivePowerWatts = watts,
+        MaxActivePowerWatts = watts,
+        AverageVoltageVolts = volts,
+        AverageCurrentAmps = amps,
+        AveragePowerFactor = pf,
+        DataPointsCount = 1
+    };
+    private enum BucketSize { Minute, Hour, Day, Month }
+    private static DateTime Bucket(DateTime ts, BucketSize size) => size switch
+    {
+        BucketSize.Minute => new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc),
+        BucketSize.Hour => new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, 0, 0, DateTimeKind.Utc),
+        BucketSize.Day => new DateTime(ts.Year, ts.Month, ts.Day, 0, 0, 0, DateTimeKind.Utc),
+        BucketSize.Month => new DateTime(ts.Year, ts.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+        _ => throw new ArgumentOutOfRangeException(nameof(size))
+    };
+}
+```
+
+## File: energy-backend.Infrastructure/Seeding/SeedData.cs
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using energy_backend.Core.Entities;
+using energy_backend.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+namespace energy_backend.Infrastructure.Seeding
+{
+    public static class SeedData
+    {
+        public static async Task SeedAggregatedEnergyDbAsync(EnergyDbContext context)
+        {
+            var devices = await context.Devices
+                .Include(d => d.Organisation)
+                .AsNoTracking()
+                .ToListAsync();
+            if (!devices.Any()) return;
+            var rng = new Random(42);
+            var now = DateTime.UtcNow;
+            var threeMonthsAgo = now.AddMonths(-3);
+            foreach (var device in devices)
+            {
+                await SeedDeviceHistoryAsync(context, device, threeMonthsAgo, now, rng);
+            }
+        }
+        public static async Task SeedDeviceHistoryAsync(EnergyDbContext context, Guid deviceId)
+        {
+            var device = await context.Devices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
+            if (device == null) return;
+            await SeedDeviceHistoryAsync(context, device, DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow, new Random(42));
+        }
+        private static async Task SeedDeviceHistoryAsync(
+            EnergyDbContext context,
+            Device device,
+            DateTime from,
+            DateTime to,
+            Random rng)
+        {
+            var cleanFrom = new DateTime(from.Year, from.Month, from.Day, from.Hour, from.Minute, 0, DateTimeKind.Utc);
+            var cleanTo = new DateTime(to.Year, to.Month, to.Day, to.Hour, to.Minute, 0, DateTimeKind.Utc);
+            var ratedW = device.RatedPowerWatts > 0
+                ? device.RatedPowerWatts
+                : (float)(rng.NextDouble() * 450.0 + 50.0);
+            await SeedMinutesAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedHoursAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedDaysAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedMonthsAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+        }
+        private static async Task SeedMinutesAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
+        {
+            var start = FloorMinute(from);
+            var end = FloorMinute(to);
+            var existing = await ctx.AggregateMinuteEnergies
+                .AsNoTracking()
+                .Where(a => a.DeviceId == device.DeviceId)
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
+            var cursor = start;
+            var batch = new List<AggregateMinuteEnergy>(2000);
+            while (cursor <= end)
+            {
+                if (existing.Contains(cursor))
+                {
+                    cursor = cursor.AddMinutes(1);
+                    continue;
+                }
+                var watts = SimulateWatts(ratedW, cursor, rng);
+                var kwh = watts * 60f / 3_600_000f;
+                batch.Add(new AggregateMinuteEnergy
+                {
+                    Id = Guid.NewGuid(),
+                    OrgId = device.OrganisationId,
+                    DeviceId = device.DeviceId,
+                    Timestamp = cursor,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.88f,
+                    MaxActivePowerWatts = watts * 1.12f,
+                    TotalActiveEnergyKwh = kwh,
+                    DataPointsCount = 12,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
+                });
+                cursor = cursor.AddMinutes(1);
+                if (batch.Count >= 2000)
+                {
+                    await ctx.AggregateMinuteEnergies.AddRangeAsync(batch);
+                    await ctx.SaveChangesAsync();
+                    batch.Clear();
+                }
+            }
+            if (batch.Any())
+            {
+                await ctx.AggregateMinuteEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
+            }
+        }
+        private static async Task SeedHoursAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
+        {
+            var start = FloorHour(from);
+            var end = FloorHour(to);
+            var existing = await ctx.AggregateHourEnergies
+                .AsNoTracking()
+                .Where(a => a.DeviceId == device.DeviceId)
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
+            var cursor = start;
+            var batch = new List<AggregateHourEnergy>();
+            while (cursor <= end)
+            {
+                if (existing.Contains(cursor))
+                {
+                    cursor = cursor.AddHours(1);
+                    continue;
+                }
+                var watts = SimulateWatts(ratedW, cursor, rng);
+                var kwh = watts / 1000f;
+                batch.Add(new AggregateHourEnergy
+                {
+                    Id = Guid.NewGuid(),
+                    OrgId = device.OrganisationId,
+                    DeviceId = device.DeviceId,
+                    Timestamp = cursor,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.75f,
+                    MaxActivePowerWatts = watts * 1.25f,
+                    TotalActiveEnergyKwh = kwh,
+                    DataPointsCount = 720,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
+                });
+                cursor = cursor.AddHours(1);
+            }
+            if (batch.Any())
+            {
+                await ctx.AggregateHourEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
+            }
+        }
+        private static async Task SeedDaysAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
+        {
+            var start = from.Date;
+            var end = to.Date;
+            var existing = await ctx.AggregateDayEnergies
+                .AsNoTracking()
+                .Where(a => a.DeviceId == device.DeviceId)
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
+            var cursor = start;
+            var batch = new List<AggregateDayEnergy>();
+            while (cursor.Date <= end)
+            {
+                if (existing.Contains(cursor.Date))
+                {
+                    cursor = cursor.AddDays(1);
+                    continue;
+                }
+                var watts = SimulateWatts(ratedW, cursor, rng);
+                var kwh = watts * 24f / 1000f;
+                batch.Add(new AggregateDayEnergy
+                {
+                    Id = Guid.NewGuid(),
+                    OrgId = device.OrganisationId,
+                    DeviceId = device.DeviceId,
+                    Timestamp = cursor.Date,
+                    AverageActivePowerWatts = watts,
+                    MinActivePowerWatts = watts * 0.60f,
+                    MaxActivePowerWatts = watts * 1.40f,
+                    TotalActiveEnergyKwh = kwh,
+                    DataPointsCount = 17280,
+                    AverageVoltageVolts = 230f,
+                    AverageCurrentAmps = watts / 230f,
+                    AveragePowerFactor = 0.95f
+                });
+                cursor = cursor.AddDays(1);
+            }
+            if (batch.Any())
+            {
+                await ctx.AggregateDayEnergies.AddRangeAsync(batch);
+                await ctx.SaveChangesAsync();
+            }
+        }
+        private static async Task SeedMonthsAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
+        {
+            var cursor = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var endMonth = new DateTime(to.Year, to.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var existing = await ctx.AggregateMonthEnergies
+                .AsNoTracking()
+                .Where(a => a.DeviceId == device.DeviceId)
+                .Where(a => a.Timestamp >= cursor && a.Timestamp <= endMonth)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
+            while (cursor <= endMonth)
+            {
+                if (!existing.Contains(cursor))
+                {
+                    var watts = SimulateWatts(ratedW, cursor.AddHours(12), rng);
+                    var daysInMonth = DateTime.DaysInMonth(cursor.Year, cursor.Month);
+                    var kwh = watts * 24f * daysInMonth / 1000f;
+                    await ctx.AggregateMonthEnergies.AddAsync(new AggregateMonthEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = device.OrganisationId,
+                        DeviceId = device.DeviceId,
+                        Timestamp = cursor,
+                        AverageActivePowerWatts = watts,
+                        MinActivePowerWatts = watts * 0.55f,
+                        MaxActivePowerWatts = watts * 1.45f,
+                        TotalActiveEnergyKwh = kwh,
+                        DataPointsCount = daysInMonth * 17280,
+                        AverageVoltageVolts = 230f,
+                        AverageCurrentAmps = watts / 230f,
+                        AveragePowerFactor = 0.95f
+                    });
+                }
+                cursor = cursor.AddMonths(1);
+            }
+            await ctx.SaveChangesAsync();
+        }
+        private static float SimulateWatts(float ratedW, DateTime utcTime, Random rng)
+        {
+            var hour = utcTime.Hour;
+            double loadFactor = hour switch
+            {
+                >= 0 and < 5 => 0.15,
+                >= 5 and < 7 => 0.30 + (hour - 5) * 0.15,
+                >= 7 and < 9 => 0.65 + (hour - 7) * 0.10,
+                >= 9 and < 12 => 0.85,
+                >= 12 and < 14 => 0.75,
+                >= 14 and < 17 => 0.85,
+                >= 17 and < 20 => 1.00,
+                >= 20 and < 22 => 0.80,
+                _ => 0.50
+            };
+            var noise = (rng.NextDouble() * 0.50) - 0.25;
+            return (float)Math.Max(0.0, ratedW * loadFactor * (1.0 + noise));
+        }
+        private static DateTime FloorMinute(DateTime dt) =>
+            new(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, DateTimeKind.Utc);
+        private static DateTime FloorHour(DateTime dt) =>
+            new(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, DateTimeKind.Utc);
+    }
+}
+```
+
+## File: energy-backend/Program.cs
+```csharp
+using energy_backend.Api;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Hubs;
+using energy_backend.Infrastructure.Seeding;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
+using System.Text;
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCors(options =>
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
+builder.Services.AddDbContext<EnergyDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        b => b.MigrationsAssembly("energy-backend.Infrastructure")));
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["AppSettings:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["AppSettings:Audience"],
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(GetRequiredJwtToken(builder.Configuration)))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/unifiedHub"))
+                    context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddApiServices();
+var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+await SeedAggregatedEnergyDbAsync(app.Services);
+app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseWebSockets();
+app.MapControllers();
+app.MapHub<UnifiedHub>("/unifiedHub");
+app.Run();
+static string GetRequiredJwtToken(IConfiguration configuration)
+{
+    var token = configuration["AppSettings:Token"];
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        throw new InvalidOperationException(
+            "JWT token is not configured. Set AppSettings:Token via dotnet user-secrets or the AppSettings__Token environment variable.");
+    }
+    return token;
+}
+static async Task SeedAggregatedEnergyDbAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        await SeedData.SeedAggregatedEnergyDbAsync(context);
+        logger.LogInformation("Seed completed.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Seeding failed.");
+    }
+}
+```

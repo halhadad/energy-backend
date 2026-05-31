@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Core.Interfaces;
-using energy_backend.Data;
+using energy_backend.Infrastructure.Data;
 using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +16,7 @@ namespace energy_backend.Infrastructure.Repositories
         {
             return await context.Alerts
                 .Include(a => a.Organisation)
-                    .ThenInclude(o => o.Devices)
+                    .ThenInclude(o => o!.Devices)
                 .Where(a => a.Organisation!.UserId == userId)
                 .ToListAsync();
         }
@@ -30,9 +30,21 @@ namespace energy_backend.Infrastructure.Repositories
                     a.Organisation!.UserId == userId);
         }
 
+        public async Task<List<Alert>> GetAllWithOrganisationsAsync()
+        {
+            return await context.Alerts
+                .Include(a => a.Organisation)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(Alert alert)
         {
             await context.Alerts.AddAsync(alert);
+        }
+
+        public async Task AddEventAsync(AlertEvent alertEvent)
+        {
+            await context.AlertEvents.AddAsync(alertEvent);
         }
 
         public async Task DeleteAsync(Alert alert)

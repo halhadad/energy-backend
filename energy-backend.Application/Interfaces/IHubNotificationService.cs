@@ -5,14 +5,14 @@ using energy_backend.Core.Entities;
 using energy_backend.Application.Models.SignalR;
 
 
-namespace energy_backend.Application.Services
+namespace energy_backend.Application.Interfaces
 {
     // Abstraction for sending hub notifications to maintain clean architecture
     public interface IHubNotificationService
     {
         // Chart Streaming
-        Task SendRealTimeChartUpdateAsync(string groupName, RealTimeChartDataDto data);
-        Task SendRealTimeChartCatchUpAsync(string connectionId, RealTimeChartDataDto data);
+        Task SendRealTimeChartUpdateAsync(string groupName, RealTimeEnergyIntervalDto data);
+        Task SendRealTimeChartCatchUpAsync(string connectionId, RealTimeEnergyIntervalDto data);
         Task AddToChartGroupAsync(string connectionId, string groupName);
         Task RemoveFromChartGroupAsync(string connectionId, string groupName);
 

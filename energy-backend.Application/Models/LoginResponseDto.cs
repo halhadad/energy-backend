@@ -1,9 +1,8 @@
-﻿namespace energy_backend.Models
+namespace energy_backend.Application.Models;
+
+public class LoginResponseDto
 {
-    public class LoginResponseDto
-    {
-        public required string AccessToken { get; set; }
-        public required string RefreshToken { get; set; }
-        public UserResponseDto User { get; set; } = default!;
-    }
+    public required string AccessToken { get; set; }
+    public required string RefreshToken { get; set; }
+    public UserResponseDto User { get; set; } = default!;
 }

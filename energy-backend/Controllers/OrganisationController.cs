@@ -1,116 +1,102 @@
 ﻿using System.Security.Claims;
+using energy_backend.Application.Interfaces;
 using energy_backend.Application.Models;
-using energy_backend.Application.Services;
-using energy_backend.Core.Entities;
-using energy_backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace energy_backend.Controllers
+namespace energy_backend.Controllers;
+
+[Authorize]
+[Route("api/[controller]")]
+[ApiController]
+public class OrganisationController(
+    IOrganisationService orgService,
+    // ADDED: analytics injected here directly — OrganisationService no longer calls
+    // IEnergyAnalyticsOrchestratorService internally (cross-service dependency removed).
+    IEnergyAnalyticsOrchestratorService analyticsOrchestrator) : ControllerBase
 {
-    [Authorize]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class OrganisationController(IOrganisationService orgService) : ControllerBase
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<OrganisationResponseDto>>> GetAllOrganisations()
     {
-        // Retrieves all organisations for the authenticated user.
-        [HttpGet]
-        public async Task<ActionResult<List<Organisation>>> GetAllOrganisations()
-        {
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
 
-            var orgs = await orgService.GetAllOrganisationsAsync(userId);
-            return orgs is null ? BadRequest("Error fetching organisations") : Ok(orgs);
-        }
+        var orgs = await orgService.GetAllOrganisationsAsync(userId);
+        // CHANGED: null → empty list, not BadRequest. No organisations is a valid
+        // state, not an error.
+        return Ok(orgs ?? Enumerable.Empty<OrganisationResponseDto>());
+    }
 
-        // Creates a new organisation for the authenticated user.
+    [HttpPost]
+    public async Task<ActionResult<OrganisationResponseDto>> CreateOrganisation(
+        [FromBody] OrganisationRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type))
+            return BadRequest("Organisation name and type are required.");
 
-        [HttpPost]
-        public async Task<ActionResult<OrganisationResponseDto>> CreateOrganisation([FromBody] OrganisationRequestDto request)
-        {
-            if (request == null || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Type))
-                return BadRequest("Organisation name and type are required.");
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
 
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
+        var org = await orgService.CreateOrganisationAsync(userId, request);
+        return org is null
+            ? BadRequest("Could not create organisation.")
+            : CreatedAtAction(nameof(GetOrganisationAnalytics), new { organisationId = org.OrganisationId }, org);
+    }
 
-            var org = await orgService.CreateOrganisationAsync(userId, request);
-            return org is null ? BadRequest("Error creating organisation") : Ok(org);
-        }
+    [HttpPut("{organisationId:guid}")]
+    public async Task<ActionResult<OrganisationResponseDto>> UpdateOrganisation(
+        Guid organisationId, [FromBody] OrganisationRequestDto request)
+    {
+        if (organisationId == Guid.Empty) return BadRequest("Invalid organisation ID.");
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
 
+        var updated = await orgService.UpdateOrganisationAsync(userId, organisationId, request);
+        return updated is null ? NotFound("Organisation not found.") : Ok(updated);
+    }
 
-        // Updates an existing organisation for the authenticated user.
-        [HttpPut("{organisationId}")]
-        public async Task<ActionResult<OrganisationResponseDto>> UpdateOrganisation(Guid organisationId, [FromBody] OrganisationRequestDto request)
-        {
-            if (request == null || organisationId == Guid.Empty)
-                return BadRequest("Invalid organisation data.");
+    [HttpDelete("{organisationId:guid}")]
+    public async Task<IActionResult> DeleteOrganisation(Guid organisationId)
+    {
+        if (organisationId == Guid.Empty) return BadRequest("Invalid organisation ID.");
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
 
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
+        var deleted = await orgService.DeleteOrganisationAsync(userId, organisationId);
+        // CHANGED: was ActionResult<bool> returning Ok(true) — DELETE should return
+        // 204 No Content on success, not a bool payload.
+        return deleted ? NoContent() : NotFound("Organisation not found.");
+    }
 
-            var updatedOrg = await orgService.UpdateOrganisationAsync(userId, organisationId, request);
-            return updatedOrg is null ? NotFound("Organisation not found") : Ok(updatedOrg);
-        }
+    [HttpGet("HasOrganisation")]
+    public async Task<ActionResult<bool>> HasOrganisation()
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
+        return Ok(await orgService.HasOrganisationAsync(userId));
+    }
 
-        // Deletes an organisation owned by the authenticated user.
+    [HttpGet("GetOrganisationAnalytics/{organisationId:guid}")]
+    public async Task<ActionResult<OrganisationAnalyticsDto>> GetOrganisationAnalytics(
+        Guid organisationId)
+    {
+        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid User.");
 
-        [HttpDelete("{organisationId}")]
-        public async Task<ActionResult<bool>> DeleteOrganisation(Guid organisationId)
-        {
-            if (organisationId == Guid.Empty)
-                return BadRequest("Invalid organisation ID.");
+        // Ownership check — verify this org belongs to the calling user before
+        // returning any analytics data.
+        var org = await orgService.GetByIdAsync(userId, organisationId);
+        if (org is null) return NotFound("Organisation not found.");
 
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
+        // CHANGED: was orgService.GetOrganisationAnalyticsAsync — that made
+        // OrganisationService call IEnergyAnalyticsOrchestratorService internally.
+        // Controller now calls the two services independently.
+        var analytics = await analyticsOrchestrator.GetOrganisationAnalyticsAsync(organisationId);
+        return analytics is null
+            ? NotFound("No analytics data available.")
+            : Ok(analytics);
+        // REMOVED: bare try/catch swallowing all exceptions into BadRequest.
+        // Let the global exception handler deal with unexpected errors — hiding
+        // them here makes bugs invisible.
+    }
 
-            var deleted = await orgService.DeleteOrganisationAsync(userId, organisationId);
-            return deleted ? Ok(true) : NotFound("Organisation not found");
-        }
-
-        [HttpGet("HasOrganisation")]
-        public async Task<ActionResult<bool>> HasOrganisation()
-        {
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
-
-            try
-            {
-                var hasOrganisation = await orgService.HasOrganisationAsync(userId);
-                return Ok(hasOrganisation);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            
-        }
-
-        [HttpGet("GetOrganisationAnalytics/{organisationId}")]
-        public async Task<ActionResult<OrganisationAnalyticsDto>> GetOrganisationAnalytics(Guid organisationId)
-        {
-            if (!TryGetUserId(out Guid userId))
-                return Unauthorized("Invalid User.");
-
-            try
-            {
-                var organisationAnalytics = await orgService.GetOrganisationAnalyticsAsync(userId, organisationId);
-                return Ok(organisationAnalytics);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-        }
-
-        // Tries to extract the user ID from the JWT claims.
-
-        private bool TryGetUserId(out Guid userId)
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(userIdClaim, out userId);
-        }
+    private bool TryGetUserId(out Guid userId)
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(claim, out userId);
     }
 }

@@ -1,11 +1,8 @@
-﻿using energy_backend.Application.Services;
-using energy_backend.Core.Interfaces;
-using energy_backend.Data;
-using energy_backend.Hubs;
-using energy_backend.Infrastructure.Repositories;
+using energy_backend.Api;
+using energy_backend.Application.Models;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Infrastructure.Hubs;
 using energy_backend.Infrastructure.Seeding;
-using energy_backend.Infrastructure.Services;
-using energy_backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -14,27 +11,27 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("AppSettings"));
+
+
 builder.Services.AddCors(options =>
-{
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials());
-});
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
 
-// ── Core ──────────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<EnergyDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("energy-backend.Infrastructure")));
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -46,79 +43,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!))
+                Encoding.UTF8.GetBytes(GetRequiredJwtToken(builder.Configuration)))
         };
 
-        // Allow JWT via query string for SignalR WebSocket connections
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
                 var token = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(token) && path.StartsWithSegments("/unifiedHub"))
+                if (!string.IsNullOrEmpty(token) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/unifiedHub"))
                     context.Token = token;
+
                 return Task.CompletedTask;
             }
         };
     });
 
-// ── Application services ──────────────────────────────────────────────────────
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IOrganisationService, OrganisationService>();
-builder.Services.AddScoped<IDeviceService, DeviceService>();
-builder.Services.AddScoped<IAlertService, AlertsService>();
-builder.Services.AddScoped<IAggregationService, AggregationService>();
-builder.Services.AddScoped<IAggregationCoordinatorService, AggregationCoordinatorService>();
-builder.Services.AddScoped<IRealTimeDataQueryService, RealTimeDataQueryService>();
-builder.Services.AddScoped<IRealTimeDataStreamService, RealTimeDataStreamService>();
-builder.Services.AddScoped<IAlertStreamService, AlertsStreamService>();
-builder.Services.AddScoped<IHubNotificationService, HubNotificationService>();
-builder.Services.AddScoped<OrganisationAnalyticsService>();
-
-// ── Repositories ──────────────────────────────────────────────────────────────
-builder.Services.AddScoped<IAlertRepository, AlertRepository>();
-builder.Services.AddScoped<IAggregatedEnergyRepository, AggregatedEnergyRepository>();
-builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
-builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
-
-// ── SignalR ───────────────────────────────────────────────────────────────────
-builder.Services.AddSignalR();
-
-// ── Background services ───────────────────────────────────────────────────────
-// NOTE: HistoricalAggregationService has been removed. The AggregationCoordinatorService
-// writes hour/day/month buckets in real-time on every reading, making a separate
-// historical re-aggregation job unnecessary and a source of double-counting bugs.
-//
-// SummaryBackfillService has also been removed — DeviceConsumptionSummary is a
-// legacy table not used by any current query path.
-builder.Services.AddHostedService<EnergyReadingSimulator>();
-builder.Services.AddHostedService<AlertsMonitorService>();
+builder.Services.AddApiServices();
 
 var app = builder.Build();
 
-// ── Pipeline ──────────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-// Seed historical data on startup (safe to run repeatedly — skips existing records)
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        await SeedData.SeedAggregatedEnergyDbAsync(context);
-        logger.LogInformation("Seed completed.");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Seeding failed.");
-    }
-}
+await SeedAggregatedEnergyDbAsync(app.Services);
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
@@ -131,3 +83,32 @@ app.MapControllers();
 app.MapHub<UnifiedHub>("/unifiedHub");
 
 app.Run();
+
+static string GetRequiredJwtToken(IConfiguration configuration)
+{
+    var token = configuration["AppSettings:Token"];
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        throw new InvalidOperationException(
+            "JWT token is not configured. Set AppSettings:Token via dotnet user-secrets or the AppSettings__Token environment variable.");
+    }
+
+    return token;
+}
+
+static async Task SeedAggregatedEnergyDbAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await SeedData.SeedAggregatedEnergyDbAsync(context);
+        logger.LogInformation("Seed completed.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Seeding failed.");
+    }
+}

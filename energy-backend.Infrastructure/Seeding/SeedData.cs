@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using energy_backend.Core.Entities;
-using energy_backend.Data;
+using energy_backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace energy_backend.Infrastructure.Seeding
 {
     /// <summary>
-    /// Seeds 7 days of historical aggregate data using realistic watt values
+    /// Seeds 3 months of historical aggregate data using realistic watt values
     /// derived from each device's RatedPowerWatts.
     ///
     /// Run on every startup — skips any time ranges already populated so it
@@ -29,19 +29,46 @@ namespace energy_backend.Infrastructure.Seeding
             // Fixed seed for reproducible history across restarts
             var rng = new Random(42);
             var now = DateTime.UtcNow;
-            var sevenDaysAgo = now.AddDays(-7);
+            var threeMonthsAgo = now.AddMonths(-3);
 
             foreach (var device in devices)
             {
-                var ratedW = device.RatedPowerWatts > 0
-                    ? device.RatedPowerWatts
-                    : (float)(rng.NextDouble() * 450.0 + 50.0);
-
-                await SeedMinutesAsync(context, device, ratedW, sevenDaysAgo, now, rng);
-                await SeedHoursAsync(context, device, ratedW, sevenDaysAgo, now, rng);
-                await SeedDaysAsync(context, device, ratedW, sevenDaysAgo, now, rng);
-                await SeedMonthAsync(context, device, ratedW, now, rng);
+                await SeedDeviceHistoryAsync(context, device, threeMonthsAgo, now, rng);
             }
+        }
+
+        public static async Task SeedDeviceHistoryAsync(EnergyDbContext context, Guid deviceId)
+        {
+            var device = await context.Devices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
+
+            if (device == null) return;
+
+            await SeedDeviceHistoryAsync(context, device, DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow, new Random(42));
+        }
+
+        private static async Task SeedDeviceHistoryAsync(
+            EnergyDbContext context,
+            Device device,
+            DateTime from,
+            DateTime to,
+            Random rng)
+        {
+            // FIX: Normalize and floor raw inputs to clean, stable minute boundaries immediately.
+            // This prevents moving millisecond sliding windows from shifting your data ranges on subsequent calls.
+            var cleanFrom = new DateTime(from.Year, from.Month, from.Day, from.Hour, from.Minute, 0, DateTimeKind.Utc);
+            var cleanTo = new DateTime(to.Year, to.Month, to.Day, to.Hour, to.Minute, 0, DateTimeKind.Utc);
+
+            var ratedW = device.RatedPowerWatts > 0
+                ? device.RatedPowerWatts
+                : (float)(rng.NextDouble() * 450.0 + 50.0);
+
+            // Pass fully normalized boundaries down to all seed workers
+            await SeedMinutesAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedHoursAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedDaysAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
+            await SeedMonthsAsync(context, device, ratedW, cleanFrom, cleanTo, rng);
         }
 
         // ── Minute buckets ────────────────────────────────────────────────────
@@ -49,18 +76,28 @@ namespace energy_backend.Infrastructure.Seeding
         private static async Task SeedMinutesAsync(EnergyDbContext ctx, Device device,
             float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var lastTs = await ctx.AggregateMinuteEnergies
+            var start = FloorMinute(from);
+            var end = FloorMinute(to);
+
+            var existing = await ctx.AggregateMinuteEnergies
+                .AsNoTracking()
                 .Where(a => a.DeviceId == device.DeviceId)
-                .MaxAsync(a => (DateTime?)a.Timestamp);
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
 
-            var cursor = lastTs.HasValue
-                ? lastTs.Value.AddMinutes(1)
-                : FloorMinute(from);
-
+            var cursor = start;
             var batch = new List<AggregateMinuteEnergy>(2000);
 
-            while (cursor < to)
+            // FIX: Evaluate using '<= end' instead of '< to' to prevent hanging un-truncated seconds from pushing an extra row.
+            while (cursor <= end)
             {
+                if (existing.Contains(cursor))
+                {
+                    cursor = cursor.AddMinutes(1);
+                    continue;
+                }
+
                 var watts = SimulateWatts(ratedW, cursor, rng);
                 // kWh for one minute = W × 60s / 3,600,000
                 var kwh = watts * 60f / 3_600_000f;
@@ -74,7 +111,7 @@ namespace energy_backend.Infrastructure.Seeding
                     AverageActivePowerWatts = watts,
                     MinActivePowerWatts = watts * 0.88f,
                     MaxActivePowerWatts = watts * 1.12f,
-                    TotalEnergyKwh = kwh,
+                    TotalActiveEnergyKwh = kwh,
                     DataPointsCount = 12,
                     AverageVoltageVolts = 230f,
                     AverageCurrentAmps = watts / 230f,
@@ -103,18 +140,28 @@ namespace energy_backend.Infrastructure.Seeding
         private static async Task SeedHoursAsync(EnergyDbContext ctx, Device device,
             float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var lastTs = await ctx.AggregateHourEnergies
+            var start = FloorHour(from);
+            var end = FloorHour(to);
+
+            var existing = await ctx.AggregateHourEnergies
+                .AsNoTracking()
                 .Where(a => a.DeviceId == device.DeviceId)
-                .MaxAsync(a => (DateTime?)a.Timestamp);
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
 
-            var cursor = lastTs.HasValue
-                ? lastTs.Value.AddHours(1)
-                : FloorHour(from);
-
+            var cursor = start;
             var batch = new List<AggregateHourEnergy>();
 
-            while (cursor < to)
+            // FIX: Evaluate using '<= end' instead of '< to'
+            while (cursor <= end)
             {
+                if (existing.Contains(cursor))
+                {
+                    cursor = cursor.AddHours(1);
+                    continue;
+                }
+
                 var watts = SimulateWatts(ratedW, cursor, rng);
                 // kWh for one hour = W / 1000
                 var kwh = watts / 1000f;
@@ -128,7 +175,7 @@ namespace energy_backend.Infrastructure.Seeding
                     AverageActivePowerWatts = watts,
                     MinActivePowerWatts = watts * 0.75f,
                     MaxActivePowerWatts = watts * 1.25f,
-                    TotalEnergyKwh = kwh,
+                    TotalActiveEnergyKwh = kwh,
                     DataPointsCount = 720,
                     AverageVoltageVolts = 230f,
                     AverageCurrentAmps = watts / 230f,
@@ -150,18 +197,28 @@ namespace energy_backend.Infrastructure.Seeding
         private static async Task SeedDaysAsync(EnergyDbContext ctx, Device device,
             float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var lastTs = await ctx.AggregateDayEnergies
+            var start = from.Date;
+            var end = to.Date;
+
+            var existing = await ctx.AggregateDayEnergies
+                .AsNoTracking()
                 .Where(a => a.DeviceId == device.DeviceId)
-                .MaxAsync(a => (DateTime?)a.Timestamp);
+                .Where(a => a.Timestamp >= start && a.Timestamp <= end)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
 
-            var cursor = lastTs.HasValue
-                ? lastTs.Value.AddDays(1)
-                : from.Date;
-
+            var cursor = start;
             var batch = new List<AggregateDayEnergy>();
 
-            while (cursor.Date < to.Date)
+            // FIX: Aligned evaluation for full days
+            while (cursor.Date <= end)
             {
+                if (existing.Contains(cursor.Date))
+                {
+                    cursor = cursor.AddDays(1);
+                    continue;
+                }
+
                 var watts = SimulateWatts(ratedW, cursor, rng);
                 // kWh for one day = W × 24h / 1000
                 var kwh = watts * 24f / 1000f;
@@ -175,7 +232,7 @@ namespace energy_backend.Infrastructure.Seeding
                     AverageActivePowerWatts = watts,
                     MinActivePowerWatts = watts * 0.60f,
                     MaxActivePowerWatts = watts * 1.40f,
-                    TotalEnergyKwh = kwh,
+                    TotalActiveEnergyKwh = kwh,
                     DataPointsCount = 17280,
                     AverageVoltageVolts = 230f,
                     AverageCurrentAmps = watts / 230f,
@@ -194,47 +251,52 @@ namespace energy_backend.Infrastructure.Seeding
 
         // ── Month bucket ──────────────────────────────────────────────────────
 
-        private static async Task SeedMonthAsync(EnergyDbContext ctx, Device device,
-            float ratedW, DateTime now, Random rng)
+        private static async Task SeedMonthsAsync(EnergyDbContext ctx, Device device,
+            float ratedW, DateTime from, DateTime to, Random rng)
         {
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var cursor = new DateTime(from.Year, from.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var endMonth = new DateTime(to.Year, to.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            var exists = await ctx.AggregateMonthEnergies
-                .AnyAsync(a => a.DeviceId == device.DeviceId && a.Timestamp == monthStart);
+            var existing = await ctx.AggregateMonthEnergies
+                .AsNoTracking()
+                .Where(a => a.DeviceId == device.DeviceId)
+                .Where(a => a.Timestamp >= cursor && a.Timestamp <= endMonth)
+                .Select(a => a.Timestamp)
+                .ToHashSetAsync();
 
-            if (exists) return;
-
-            var watts = SimulateWatts(ratedW, monthStart.AddHours(12), rng); // midday reference
-            var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-            var kwh = watts * 24f * daysInMonth / 1000f;
-
-            await ctx.AggregateMonthEnergies.AddAsync(new AggregateMonthEnergy
+            while (cursor <= endMonth)
             {
-                Id = Guid.NewGuid(),
-                OrgId = device.OrganisationId,
-                DeviceId = device.DeviceId,
-                Timestamp = monthStart,
-                AverageActivePowerWatts = watts,
-                MinActivePowerWatts = watts * 0.55f,
-                MaxActivePowerWatts = watts * 1.45f,
-                TotalEnergyKwh = kwh,
-                DataPointsCount = daysInMonth * 17280,
-                AverageVoltageVolts = 230f,
-                AverageCurrentAmps = watts / 230f,
-                AveragePowerFactor = 0.95f
-            });
+                if (!existing.Contains(cursor))
+                {
+                    var watts = SimulateWatts(ratedW, cursor.AddHours(12), rng); // midday reference
+                    var daysInMonth = DateTime.DaysInMonth(cursor.Year, cursor.Month);
+                    var kwh = watts * 24f * daysInMonth / 1000f;
+
+                    await ctx.AggregateMonthEnergies.AddAsync(new AggregateMonthEnergy
+                    {
+                        Id = Guid.NewGuid(),
+                        OrgId = device.OrganisationId,
+                        DeviceId = device.DeviceId,
+                        Timestamp = cursor,
+                        AverageActivePowerWatts = watts,
+                        MinActivePowerWatts = watts * 0.55f,
+                        MaxActivePowerWatts = watts * 1.45f,
+                        TotalActiveEnergyKwh = kwh,
+                        DataPointsCount = daysInMonth * 17280,
+                        AverageVoltageVolts = 230f,
+                        AverageCurrentAmps = watts / 230f,
+                        AveragePowerFactor = 0.95f
+                    });
+                }
+
+                cursor = cursor.AddMonths(1);
+            }
 
             await ctx.SaveChangesAsync();
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Returns a realistic watt value for a device at the given UTC time.
-        /// Anchored to ratedW with time-of-day load factor and ±25% noise.
-        /// Matches the load curve used by EnergyReadingSimulator so seeded
-        /// history is consistent with live readings.
-        /// </summary>
         private static float SimulateWatts(float ratedW, DateTime utcTime, Random rng)
         {
             var hour = utcTime.Hour;
