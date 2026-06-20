@@ -1,16 +1,16 @@
-﻿namespace energy_backend.Core.Services;
+namespace energy_backend.Core.Services;
 
 public static class EnergyCalculator
 {
-    private const float JoulesPerKwh = 3_600_000f;
+    private const double JoulesPerKwh = 3_600_000d;
 
-    public static float CalculateKwhFromWatts(float watts, float intervalSeconds)
+    public static double CalculateKwhFromWatts(double watts, double intervalSeconds)
     {
         return (watts * intervalSeconds) / JoulesPerKwh;
     }
 
-    public static float CalculateEstimatedCost(float kwh, float costRate)
+    public static decimal CalculateEstimatedCost(double kwh, decimal ratePerKwh)
     {
-        return (float)Math.Round(kwh * costRate, 4);
+        return (decimal)kwh * ratePerKwh;
     }
 }

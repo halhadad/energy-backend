@@ -7,5 +7,5 @@ public class DeviceResponseDto
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public float RatedPowerWatts { get; set; }
+    public double RatedPowerWatts { get; set; }
 }

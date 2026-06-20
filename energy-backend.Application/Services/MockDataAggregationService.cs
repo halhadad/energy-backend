@@ -1,79 +1,63 @@
 using energy_backend.Application.Interfaces;
 using energy_backend.Core.Entities;
 using energy_backend.Core.Interfaces;
-using energy_backend.Core.Services;
 using Microsoft.Extensions.Logging;
+
 namespace energy_backend.Application.Services;
 
-public class MockDataAggregationService : IMockDataAggregationService
+public class MockDataAggregationService(
+    IAggregateRepository aggregates,
+    IDeviceRepository devices,
+    IRealTimeDataStreamService stream,
+    ILogger<MockDataAggregationService> logger) : IMockDataAggregationService
 {
-    private readonly IAggregateRepository _aggregates;
-    private readonly IDeviceRepository _devices;
-    private readonly IRealTimeDataStreamService _stream;
-    private readonly ILogger<MockDataAggregationService> _logger;
-    private const float ReadingIntervalSeconds = 5f;
-    public MockDataAggregationService(
-        IAggregateRepository aggregates,
-        IDeviceRepository devices,
-        IRealTimeDataStreamService stream,
-        ILogger<MockDataAggregationService> logger)
-    {
-        _aggregates = aggregates;
-        _devices = devices;
-        _stream = stream;
-        _logger = logger;
-    }
     public async Task UpsertBucketsAsync(EnergyReading reading)
     {
-        var device = reading.Device ?? await _devices.GetByDeviceIdAsync(reading.DeviceId);
+        var device = reading.Device ?? await devices.GetByDeviceIdAsync(reading.DeviceId);
         if (device is null)
         {
-            _logger.LogWarning("Device {DeviceId} not found; skipping reading.", reading.DeviceId);
+            logger.LogWarning("Device {DeviceId} not found; skipping bucket upsert.", reading.DeviceId);
             return;
         }
+
         var orgId = device.OrganisationId;
         if (orgId == Guid.Empty) return;
-        var watts = reading.ActivePowerWatts;
-        var volts = reading.VoltageVolts;
-        var amps = reading.CurrentAmps;
-        var pf = reading.PowerFactor;
-        var kwh = EnergyCalculator.CalculateKwhFromWatts(watts, ReadingIntervalSeconds);
-        await _aggregates.UpsertMinuteAsync(Build<AggregateMinuteEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Minute), watts, volts, amps, pf, kwh));
-        await _aggregates.UpsertHourAsync(Build<AggregateHourEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Hour), watts, volts, amps, pf, kwh));
-        await _aggregates.UpsertDayAsync(Build<AggregateDayEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Day), watts, volts, amps, pf, kwh));
-        await _aggregates.UpsertMonthAsync(Build<AggregateMonthEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Month), watts, volts, amps, pf, kwh));
-        await _aggregates.SaveChangesAsync();
+
+        // Use the reading's own interval energy; never recompute from a hardcoded interval.
+        var kwh = reading.ActiveEnergyKwh;
+
+        // This service maintains the minute tier only. Hour/Day/Month are owned by
+        // HistoricalDownsamplingWorker, which promotes completed minute buckets up the chain.
+        // A second writer on the higher tiers would create divergent rows for the same slot.
+        await aggregates.UpsertMinuteAsync(
+            Build<AggregateMinuteEnergy>(orgId, reading.DeviceId, Bucket(reading.Timestamp, BucketSize.Minute), reading, kwh));
+
+        await aggregates.SaveChangesAsync();
     }
-    public async Task NotifyOrgAsync(Guid deviceId, DateTime slotTimestamp)
+
+    public async Task NotifyOrgAsync(Guid orgId, IEnumerable<Guid> deviceIds, DateTime slotTimestamp)
     {
-        var device = await _devices.GetByDeviceIdAsync(deviceId);
-        if (device is null) return;
-        var orgId = device.OrganisationId;
+        if (orgId == Guid.Empty) return;
+
         var minuteBucket = Bucket(slotTimestamp, BucketSize.Minute);
-        var hourBucket = Bucket(slotTimestamp, BucketSize.Hour);
-        var dayBucket = Bucket(slotTimestamp, BucketSize.Day);
-        var monthBucket = Bucket(slotTimestamp, BucketSize.Month);
-        var minuteRow = await _aggregates.GetLatestMinuteAsync(orgId, minuteBucket);
-        if (minuteRow is not null)
-            await _stream.NotifyMinuteAggregateUpdated(orgId, minuteRow);
-        if (slotTimestamp.Minute == 0)
+
+        // Buckets are stored per device, and the chart group is per org, so push one
+        // minute-aggregate update per device for this slot. (Hour/Day/Month are promoted
+        // asynchronously by HistoricalDownsamplingWorker and refetched by the client.)
+        foreach (var deviceId in deviceIds.Distinct())
         {
-            var hourRow = await _aggregates.GetLatestHourAsync(orgId, hourBucket);
-            if (hourRow is not null)
-                await _stream.NotifyHourAggregateUpdated(orgId, hourRow);
+            var minuteRow = await aggregates.GetMinuteAsync(deviceId, minuteBucket);
+            if (minuteRow is not null)
+                await stream.NotifyMinuteAggregateUpdated(orgId, minuteRow);
         }
-        if (slotTimestamp is { Hour: 0, Minute: 0 })
-        {
-            var dayRow = await _aggregates.GetLatestDayAsync(orgId, dayBucket);
-            if (dayRow is not null)
-                await _stream.NotifyDayAggregateUpdated(orgId, dayRow);
-            var monthRow = await _aggregates.GetLatestMonthAsync(orgId, monthBucket);
-            if (monthRow is not null)
-                await _stream.NotifyMonthAggregateUpdated(orgId, monthRow);
-        }
+
+        // Signal the historical page to refetch once per minute (when a minute bucket
+        // completes), not on every 5-second tick.
+        if (slotTimestamp.Second == 0)
+            await stream.NotifyHistoricalUpdatedAsync(orgId);
     }
-    private static T Build<T>(Guid orgId, Guid deviceId, DateTime ts,
-        float watts, float volts, float amps, float pf, float kwh)
+
+    private static T Build<T>(Guid orgId, Guid deviceId, DateTime ts, EnergyReading r, double kwh)
         where T : IEnergyAggregate, new() => new()
         {
             Id = Guid.NewGuid(),
@@ -81,15 +65,17 @@ public class MockDataAggregationService : IMockDataAggregationService
             DeviceId = deviceId,
             Timestamp = ts,
             TotalActiveEnergyKwh = kwh,
-            AverageActivePowerWatts = watts,
-            MinActivePowerWatts = watts,
-            MaxActivePowerWatts = watts,
-            AverageVoltageVolts = volts,
-            AverageCurrentAmps = amps,
-            AveragePowerFactor = pf,
+            AverageActivePowerWatts = r.ActivePowerWatts,
+            MinActivePowerWatts = r.ActivePowerWatts,
+            MaxActivePowerWatts = r.ActivePowerWatts,
+            AverageVoltageVolts = r.VoltageVolts,
+            AverageCurrentAmps = r.CurrentAmps,
+            AveragePowerFactor = r.PowerFactor,
             DataPointsCount = 1
         };
+
     private enum BucketSize { Minute, Hour, Day, Month }
+
     private static DateTime Bucket(DateTime ts, BucketSize size) => size switch
     {
         BucketSize.Minute => new DateTime(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, DateTimeKind.Utc),

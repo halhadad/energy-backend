@@ -11,6 +11,7 @@ public interface IOrganisationRepository
 {
     Task<IEnumerable<Organisation>> GetAllByUserIdAsync(Guid userId);
     Task<Organisation?> GetByIdAsync(Guid userId, Guid organisationId);
+    Task<Organisation?> GetByOrganisationIdAsync(Guid organisationId);
     Task<Organisation?> AddAsync(Organisation organisation);
     Task<bool> DeleteAsync(Organisation organisation);
     Task<bool> ExistsAsync(Guid userId);

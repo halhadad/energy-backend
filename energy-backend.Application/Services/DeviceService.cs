@@ -2,14 +2,14 @@ using energy_backend.Application.Interfaces;
 using energy_backend.Application.Models;
 using energy_backend.Core.Entities;
 using energy_backend.Core.Interfaces;
-using Microsoft.Extensions.Hosting;
+
 namespace energy_backend.Application.Services;
 
 public class DeviceService(
     IDeviceRepository repository,
     IOrganisationRepository orgRepo,
     IDemoDataSeeder demoSeeder,
-    IHostEnvironment environment) : IDeviceService
+    IAppEnvironment environment) : IDeviceService
 {
     public async Task<IEnumerable<DeviceResponseDto>> GetDevicesAsync(Guid userId)
     {
@@ -36,7 +36,7 @@ public class DeviceService(
         await repository.AddAsync(device);
         await repository.SaveChangesAsync();
 
-        if (environment.IsDevelopment())
+        if (environment.IsDevelopment)
             await demoSeeder.SeedHistoryForDeviceAsync(device.DeviceId);
         return MapDeviceToDto(device);
     }

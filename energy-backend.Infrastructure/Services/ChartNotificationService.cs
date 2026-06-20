@@ -1,72 +1,130 @@
 using energy_backend.Application.Interfaces;
 using energy_backend.Application.Models.SignalR;
 using energy_backend.Core.Entities;
+using energy_backend.Core.Enums;
 using energy_backend.Core.Interfaces;
+using energy_backend.Core.Services;
 using Microsoft.Extensions.Logging;
+
 namespace energy_backend.Infrastructure.Services;
 
-public class ChartNotificationService : IRealTimeDataStreamService
+public class ChartNotificationService(
+    IHubNotificationService hub,
+    IEnergyRateRepository rateRepo,
+    ILogger<ChartNotificationService> logger) : IRealTimeDataStreamService
 {
-    private readonly IHubNotificationService _hub;
-    private readonly ILogger<ChartNotificationService> _logger;
-    public ChartNotificationService(
-        IHubNotificationService hub,
-        ILogger<ChartNotificationService> logger)
+    // Live group: raw readings. The HTTP snapshot endpoint seeds the chart on page load,
+    // so no catch-up push is needed on subscribe.
+    public async Task SubscribeToLive(string connectionId, Guid orgId)
     {
-        _hub = hub;
-        _logger = logger;
+        await hub.AddToLiveGroupAsync(connectionId, LiveGroupName(orgId));
+        logger.LogInformation("Client {ConnectionId} subscribed to live ticks for OrgId={OrgId}",
+            connectionId, orgId);
     }
+
+    public Task UnsubscribeFromLive(string connectionId, Guid orgId)
+        => hub.RemoveFromLiveGroupAsync(connectionId, LiveGroupName(orgId));
+
+    public async Task NotifyLiveTickAsync(
+        Guid orgId, IEnumerable<EnergyReading> orgReadings, decimal ratePerKwh)
+    {
+        var readings = orgReadings.ToList();
+        if (readings.Count == 0) return;
+
+        var ts = DateTime.SpecifyKind(readings.First().Timestamp, DateTimeKind.Utc);
+        var totalWatts = readings.Sum(r => r.ActivePowerWatts);
+        var avgVoltage = readings.Average(r => r.VoltageVolts);
+        var totalCurrent = readings.Sum(r => r.CurrentAmps);
+        var avgPf = readings.Average(r => r.PowerFactor);
+
+        await hub.SendLiveTickAsync(LiveGroupName(orgId), new LiveTickDto
+        {
+            OrgId = orgId,
+            Timestamp = ts,
+            ActivePowerWatts = totalWatts,
+            VoltageVolts = avgVoltage,
+            CurrentAmps = totalCurrent,
+            PowerFactor = avgPf,
+            CostRatePerHour = (decimal)(totalWatts / 1000.0) * ratePerKwh
+        });
+    }
+
+    // Chart group: aggregate rollup notifications.
     public async Task SubscribeToChart(string connectionId, Guid orgId, string range)
     {
         if (!IsValidRange(range))
         {
-            await _hub.SendErrorAsync(connectionId, $"Invalid chart range: {range}");
+            await hub.SendErrorAsync(connectionId, $"Invalid chart range: {range}");
             return;
         }
-        var groupName = GroupName(orgId, range);
-        await _hub.AddToChartGroupAsync(connectionId, groupName);
-        _logger.LogInformation("Client {ConnectionId} subscribed to {GroupName}", connectionId, groupName);
+        await hub.AddToChartGroupAsync(connectionId, ChartGroupName(orgId, range));
+        logger.LogInformation("Client {ConnectionId} subscribed to chart:{Range} for OrgId={OrgId}",
+            connectionId, range, orgId);
     }
-    public async Task UnsubscribeFromChart(string connectionId, Guid orgId, string range)
+
+    public Task UnsubscribeFromChart(string connectionId, Guid orgId, string range)
     {
-        if (!IsValidRange(range)) return;
-        await _hub.RemoveFromChartGroupAsync(connectionId, GroupName(orgId, range));
+        if (!IsValidRange(range)) return Task.CompletedTask;
+        return hub.RemoveFromChartGroupAsync(connectionId, ChartGroupName(orgId, range));
     }
+
+    // Historical page: clients join and get a lightweight "data changed" signal to refetch.
+    public Task SubscribeToHistorical(string connectionId, Guid orgId)
+        => hub.AddToHistoricalGroupAsync(connectionId, HistoricalGroupName(orgId));
+
+    public Task UnsubscribeFromHistorical(string connectionId, Guid orgId)
+        => hub.RemoveFromHistoricalGroupAsync(connectionId, HistoricalGroupName(orgId));
+
+    public Task NotifyHistoricalUpdatedAsync(Guid orgId)
+        => hub.SendHistoricalUpdateAsync(HistoricalGroupName(orgId),
+            new { OrgId = orgId, UpdatedAt = DateTime.UtcNow });
+
     public async Task NotifyMinuteAggregateUpdated(Guid orgId, AggregateMinuteEnergy minuteAggregate)
         => await SendAggregateAsync(orgId, "minute", minuteAggregate);
+
     public async Task NotifyHourAggregateUpdated(Guid orgId, AggregateHourEnergy hourAggregate)
         => await SendAggregateAsync(orgId, "hour", hourAggregate);
+
     public async Task NotifyDayAggregateUpdated(Guid orgId, AggregateDayEnergy dayAggregate)
         => await SendAggregateAsync(orgId, "day", dayAggregate);
+
     public async Task NotifyMonthAggregateUpdated(Guid orgId, AggregateMonthEnergy monthAggregate)
         => await SendAggregateAsync(orgId, "month", monthAggregate);
+
     private async Task SendAggregateAsync(Guid orgId, string range, IEnergyAggregate aggregate)
     {
-        await _hub.SendRealTimeChartUpdateAsync(GroupName(orgId, range), new RealTimeEnergyIntervalDto
+        var ts = DateTime.SpecifyKind(aggregate.Timestamp, DateTimeKind.Utc);
+        var rate = await rateRepo.GetCurrentRateAsync(orgId);
+        var cost = EnergyCalculator.CalculateEstimatedCost(aggregate.TotalActiveEnergyKwh, rate);
+
+        await hub.SendRealTimeChartUpdateAsync(ChartGroupName(orgId, range), new RealTimeEnergyIntervalDto
         {
             OrgId = orgId,
             Range = range,
             IntervalSizeMinutes = IntervalSizeMinutes(range),
             Sequence = DateTime.UtcNow.Ticks,
             Version = DateTime.UtcNow.Ticks,
-            Intervals = new List<EnergyIntervalSummaryDto>
-            {
-                new()
+            Intervals =
+            [
+                new EnergyIntervalSummaryDto
                 {
-                    Timestamp      = aggregate.Timestamp,
-                    Label          = Label(aggregate.Timestamp, range),
+                    Timestamp      = ts,
+                    Label          = Label(ts, range),
                     TotalEnergy    = (decimal)aggregate.TotalActiveEnergyKwh,
                     AverageWatts   = aggregate.AverageActivePowerWatts,
                     AverageVoltage = aggregate.AverageVoltageVolts,
                     TotalCurrent   = aggregate.AverageCurrentAmps,
-                    EstimatedCost  = 0
+                    EstimatedCost  = cost
                 }
-            }
+            ]
         });
     }
-    private static string GroupName(Guid orgId, string range) => $"chart:org:{orgId}:{range}";
-    private static bool IsValidRange(string range) => range is "minute" or "hour" or "day" or "month";
-    private static int IntervalSizeMinutes(string range) => range switch
+
+    private static string LiveGroupName(Guid orgId) => $"live:org:{orgId}";
+    private static string ChartGroupName(Guid orgId, string r) => $"chart:org:{orgId}:{r}";
+    private static string HistoricalGroupName(Guid orgId) => $"historical:org:{orgId}";
+    private static bool IsValidRange(string r) => r is "minute" or "hour" or "day" or "month";
+    private static int IntervalSizeMinutes(string r) => r switch
     {
         "minute" => 1,
         "hour" => 60,
@@ -74,12 +132,12 @@ public class ChartNotificationService : IRealTimeDataStreamService
         "month" => 43200,
         _ => 0
     };
-    private static string Label(DateTime timestamp, string range) => range switch
+    private static string Label(DateTime ts, string r) => r switch
     {
-        "minute" => timestamp.ToString("HH:mm:ss"),
-        "hour" => timestamp.ToString("HH:mm"),
-        "day" => timestamp.ToString("ddd d"),
-        "month" => timestamp.ToString("MMM yy"),
-        _ => timestamp.ToString("O")
+        "minute" => ts.ToString("HH:mm:ss"),
+        "hour" => ts.ToString("HH:mm"),
+        "day" => ts.ToString("ddd d"),
+        "month" => ts.ToString("MMM yy"),
+        _ => ts.ToString("O")
     };
 }

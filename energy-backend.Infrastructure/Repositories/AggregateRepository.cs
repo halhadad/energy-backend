@@ -44,6 +44,8 @@ public class AggregateRepository(EnergyDbContext context) : IAggregateRepository
     }
     public async Task<AggregateMinuteEnergy?> GetLatestMinuteAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
         => await context.AggregateMinuteEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
+    public async Task<AggregateMinuteEnergy?> GetMinuteAsync(Guid deviceId, DateTime timestamp, CancellationToken ct = default)
+        => await context.AggregateMinuteEnergies.FirstOrDefaultAsync(a => a.DeviceId == deviceId && a.Timestamp == timestamp, ct);
     public async Task<AggregateHourEnergy?> GetLatestHourAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
         => await context.AggregateHourEnergies.FirstOrDefaultAsync(a => a.OrgId == orgId && a.Timestamp == timestamp, ct);
     public async Task<AggregateDayEnergy?> GetLatestDayAsync(Guid orgId, DateTime timestamp, CancellationToken ct = default)
@@ -58,11 +60,6 @@ public class AggregateRepository(EnergyDbContext context) : IAggregateRepository
         => await context.AggregateHourEnergies.Where(h => h.Timestamp < boundary).ToListAsync(ct);
     public async Task<List<AggregateDayEnergy>> GetDaysBeforeAsync(DateTime boundary, CancellationToken ct = default)
         => await context.AggregateDayEnergies.Where(d => d.Timestamp < boundary).ToListAsync(ct);
-    // ADDED: was missing from interface and implementation — needed by RecurrentDataRollupWorker
-    // to avoid double-writing buckets the coordinator already created.
-    public async Task<bool> MinuteExistsAsync(Guid orgId, Guid? deviceId, DateTime minuteSlot, CancellationToken ct = default)
-        => await context.AggregateMinuteEnergies
-            .AnyAsync(m => m.OrgId == orgId && m.DeviceId == deviceId && m.Timestamp == minuteSlot, ct);
     public async Task<bool> HourExistsAsync(Guid orgId, Guid? deviceId, DateTime hourSlot, CancellationToken ct = default)
         => await context.AggregateHourEnergies.AnyAsync(h => h.OrgId == orgId && h.DeviceId == deviceId && h.Timestamp == hourSlot, ct);
     public async Task<bool> DayExistsAsync(Guid orgId, Guid? deviceId, DateTime daySlot, CancellationToken ct = default)

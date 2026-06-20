@@ -1,31 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace energy_backend.Core.Common;
 
-namespace energy_backend.Core.Common
+public static class TimeSlots
 {
-    public static class TimeSlots
-    {      
-        // Floors a DateTime (UTC) to the start of the 5-second slot.
-        
-        public static DateTime FloorTo5sUtc(DateTime utcTime)
-        {
-            if (utcTime.Kind != DateTimeKind.Utc)
-                utcTime = utcTime.ToUniversalTime();
+    // round a utc time down to the previous interval boundary (e.g. 14:07:08 with 5s gives 14:07:05)
+    public static DateTime FloorToIntervalUtc(DateTime utcTime, int intervalSeconds)
+    {
+        if (utcTime.Kind != DateTimeKind.Utc)
+            utcTime = utcTime.ToUniversalTime();
 
-            int seconds = utcTime.Second - (utcTime.Second % 5);
-            return new DateTime(
-                utcTime.Year,
-                utcTime.Month,
-                utcTime.Day,
-                utcTime.Hour,
-                utcTime.Minute,
-                seconds,
-                DateTimeKind.Utc
-            );
-        }
+        var intervalTicks = TimeSpan.FromSeconds(intervalSeconds).Ticks;
+        return new DateTime(
+            utcTime.Ticks - (utcTime.Ticks % intervalTicks),
+            DateTimeKind.Utc);
     }
 
+    public static DateTime FloorTo5sUtc(DateTime utcTime)
+        => FloorToIntervalUtc(utcTime, 5);
 }

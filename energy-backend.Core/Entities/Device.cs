@@ -1,9 +1,8 @@
-﻿using energy_backend.Core.Enums;
+using energy_backend.Core.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace energy_backend.Core.Entities
 {
-
     public class Device
     {
         [Key]
@@ -12,9 +11,8 @@ namespace energy_backend.Core.Entities
         public string Name { get; set; } = string.Empty;
         public DeviceType Type { get; set; }
         public string? Description { get; set; }
-        public float RatedPowerWatts { get; set; }
+        public double RatedPowerWatts { get; set; }
 
-        // Navigation properties
         public Organisation? Organisation { get; set; }
     }
 }

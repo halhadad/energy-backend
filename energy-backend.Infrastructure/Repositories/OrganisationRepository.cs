@@ -27,6 +27,12 @@ namespace energy_backend.Infrastructure.Repositories
                 .FirstOrDefaultAsync(o => o.OrganisationId == organisationId && o.UserId == userId);
         }
 
+        public async Task<Organisation?> GetByOrganisationIdAsync(Guid organisationId)
+        {
+            return await context.Organisations
+                .FirstOrDefaultAsync(o => o.OrganisationId == organisationId);
+        }
+
         public async Task<Organisation?> AddAsync(Organisation organisation)
         {
             await context.Organisations.AddAsync(organisation);

@@ -1,4 +1,4 @@
-﻿namespace energy_backend.Core.Interfaces;
+namespace energy_backend.Core.Interfaces;
 
 public interface IEnergyAggregate
 {
@@ -6,12 +6,12 @@ public interface IEnergyAggregate
     Guid OrgId { get; set; }
     Guid? DeviceId { get; set; }
     DateTime Timestamp { get; set; }
-    float TotalActiveEnergyKwh { get; set; }
-    float AverageActivePowerWatts { get; set; }
-    float MinActivePowerWatts { get; set; }
-    float MaxActivePowerWatts { get; set; }
-    float AverageVoltageVolts { get; set; }
-    float AverageCurrentAmps { get; set; }
-    float AveragePowerFactor { get; set; }
+    double TotalActiveEnergyKwh { get; set; }
+    double AverageActivePowerWatts { get; set; }
+    double MinActivePowerWatts { get; set; }
+    double MaxActivePowerWatts { get; set; }
+    double AverageVoltageVolts { get; set; }
+    double AverageCurrentAmps { get; set; }
+    double AveragePowerFactor { get; set; }
     int DataPointsCount { get; set; }
 }

@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using energy_backend.Application.Models;
-using energy_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using energy_backend.Application.Interfaces;
@@ -36,11 +35,6 @@ namespace energy_backend.Controllers
             return Ok(devices);
         }
 
-        /// <summary>
-        /// Paginated device list for an organisation.
-        /// GET /api/Device/byOrganisation/{orgId}/paged?page=1&pageSize=10
-        /// Returns: { items, total, page, pageSize, totalPages }
-        /// </summary>
         [HttpGet("byOrganisation/{orgId}/paged")]
         public async Task<IActionResult> GetByOrganisationIdPaged(
             Guid orgId,

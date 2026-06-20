@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Self-contained test runner: a console app with a tiny assertion harness and no external
+    test framework packages, so it builds and runs in environments without NuGet access.
+    References the Application and Core layers only (no Infrastructure, EF, or ASP.NET Core),
+    so the units under test are the page-orchestration and calculation logic.
+    Run with: dotnet run on this project.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\energy-backend.Application\energy-backend.Application.csproj" />
+    <ProjectReference Include="..\energy-backend.Core\energy-backend.Core.csproj" />
+  </ItemGroup>
+
+</Project>

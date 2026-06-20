@@ -1,7 +1,8 @@
 using energy_backend.Api;
 using energy_backend.Application.Models;
+using energy_backend.Api.Hubs;
+using energy_backend.Application.Configuration;
 using energy_backend.Infrastructure.Data;
-using energy_backend.Infrastructure.Hubs;
 using energy_backend.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("AppSettings"));
 
@@ -60,7 +62,7 @@ builder.Services
         };
     });
 
-builder.Services.AddApiServices();
+builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -93,6 +95,13 @@ static string GetRequiredJwtToken(IConfiguration configuration)
             "JWT token is not configured. Set AppSettings:Token via dotnet user-secrets or the AppSettings__Token environment variable.");
     }
 
+    // hmac-sha512 needs at least 64 bytes, fail early with a clear message
+    if (Encoding.UTF8.GetByteCount(token) < 64)
+    {
+        throw new InvalidOperationException(
+            "AppSettings:Token must be at least 64 bytes for HMAC-SHA512 signing.");
+    }
+
     return token;
 }
 
@@ -100,11 +109,14 @@ static async Task SeedAggregatedEnergyDbAsync(IServiceProvider services)
 {
     await using var scope = services.CreateAsyncScope();
     var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
+    var settings = scope.ServiceProvider.GetRequiredService<EnergySettings>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     try
     {
-        await SeedData.SeedAggregatedEnergyDbAsync(context);
+        // no migrations here, just make sure the schema exists on first run
+        await context.Database.EnsureCreatedAsync();
+        await SeedData.SeedAggregatedEnergyDbAsync(context, settings.CostPerKwh);
         logger.LogInformation("Seed completed.");
     }
     catch (Exception ex)

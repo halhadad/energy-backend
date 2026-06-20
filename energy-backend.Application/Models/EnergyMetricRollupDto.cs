@@ -9,7 +9,7 @@ public class EnergyMetricRollupDto
     public double MinActivePowerWatts { get; set; }
     public double MaxActivePowerWatts { get; set; }
     public double AverageVoltageVolts { get; set; }
-    public double TotalCurrentAmps { get; set; }
+    public double AverageCurrentAmps { get; set; }
     public double AveragePowerFactor { get; set; }
     public int DataPointsCount { get; set; }
     public decimal EstimatedCost { get; set; }

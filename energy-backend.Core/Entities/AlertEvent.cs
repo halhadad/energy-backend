@@ -6,8 +6,8 @@ public class AlertEvent
     public Guid AlertId { get; set; }
     public Guid OrganisationId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public float ThresholdValue { get; set; }
-    public float TriggeredValueWatts { get; set; }
+    public double ThresholdValue { get; set; }
+    public double TriggeredValueWatts { get; set; }
     public DateTime TriggeredAt { get; set; }
     public bool IsAcknowledged { get; set; }
     public DateTime? AcknowledgedAt { get; set; }

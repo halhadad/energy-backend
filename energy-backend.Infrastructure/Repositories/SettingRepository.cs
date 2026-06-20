@@ -1,4 +1,3 @@
-// energy-backend.Infrastructure/Repositories/SettingRepository.cs
 using energy_backend.Core.Entities;
 using energy_backend.Core.Interfaces;
 using energy_backend.Infrastructure.Data;

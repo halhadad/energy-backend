@@ -1,4 +1,3 @@
-// energy-backend.Core/Interfaces/ISettingRepository.cs
 using energy_backend.Core.Entities;
 
 namespace energy_backend.Core.Interfaces;

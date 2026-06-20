@@ -1,14 +1,13 @@
 using energy_backend.Application.Interfaces;
 using energy_backend.Application.Models;
-using energy_backend.Application.Models.Projections;
+using energy_backend.Core.Projections;
 using energy_backend.Core.Enums;
-using Microsoft.Extensions.Logging;
+using energy_backend.Core.Interfaces;
 
 namespace energy_backend.Application.Services;
 
 public class SnapshotService(
-    IAnalyticsRepository analyticsRepo,
-    ILogger<SnapshotService> logger) : ISnapshotService
+    IAnalyticsRepository analyticsRepo) : ISnapshotService
 {
     public async Task<AggregationResultDto> GetSnapshotAsync(AggregationRequestDto request)
     {

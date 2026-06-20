@@ -1,30 +1,38 @@
+using energy_backend.Application.Configuration;
 using energy_backend.Application.Interfaces;
 using energy_backend.Application.Models;
 using energy_backend.Core.Entities;
 using energy_backend.Core.Interfaces;
+
 namespace energy_backend.Application.Services;
 
 public class OrganisationService(
-    IOrganisationRepository repository) : IOrganisationService
+    IOrganisationRepository repository,
+    IEnergyRateRepository rateRepo,
+    EnergySettings settings) : IOrganisationService
 {
-    // FIX: was also injecting IEnergyAnalyticsOrchestratorService and calling it
-    // from GetOrganisationAnalyticsAsync — application services should not call each
-    // other. Analytics is now fetched directly by the controller (OrganisationController)
-    // which already has IEnergyAnalyticsOrchestratorService injected.
-    // GetOrganisationAnalyticsAsync is removed from this service; the controller
-    // calls orgService.GetByIdAsync for the existence check, then calls
-    // analyticsOrchestrator.GetOrganisationAnalyticsAsync separately.
     public async Task<IEnumerable<OrganisationResponseDto>?> GetAllOrganisationsAsync(Guid userId)
     {
         var organisations = await repository.GetAllByUserIdAsync(userId);
-        return organisations.Select(MapToDto);
+        var result = new List<OrganisationResponseDto>();
+        foreach (var org in organisations)
+        {
+            var dto = MapToDto(org);
+            dto.CostPerKwh = await rateRepo.GetCurrentRateAsync(org.OrganisationId);
+            result.Add(dto);
+        }
+        return result;
     }
-    // ADDED: needed by the controller to check org ownership before fetching analytics
+
     public async Task<OrganisationResponseDto?> GetByIdAsync(Guid userId, Guid organisationId)
     {
         var org = await repository.GetByIdAsync(userId, organisationId);
-        return org is null ? null : MapToDto(org);
+        if (org is null) return null;
+        var dto = MapToDto(org);
+        dto.CostPerKwh = await rateRepo.GetCurrentRateAsync(org.OrganisationId);
+        return dto;
     }
+
     public async Task<OrganisationResponseDto?> CreateOrganisationAsync(Guid userId, OrganisationRequestDto request)
     {
         var organisation = new Organisation
@@ -33,13 +41,27 @@ public class OrganisationService(
             Name = request.Name,
             Type = request.Type,
             UserId = userId,
-            // RENAMED: was request.EnergyBudget → organisation.Budget (inconsistent names)
-            EnergyBudgetKwh = request.EnergyBudgetKwh
+            MonthlyBudgetUsd = request.MonthlyBudgetUsd
         };
         await repository.AddAsync(organisation);
         await repository.SaveChangesAsync();
-        return MapToDto(organisation);
+
+        // Seed an open-ended starting tariff so cost/carbon analytics are meaningful immediately.
+        await rateRepo.AddAsync(new EnergyRate
+        {
+            Id = Guid.NewGuid(),
+            OrganisationId = organisation.OrganisationId,
+            RatePerKwh = settings.CostPerKwh,
+            ValidFromUtc = DateTime.UtcNow,
+            ValidToUtc = null
+        });
+        await rateRepo.SaveChangesAsync();
+
+        var dto = MapToDto(organisation);
+        dto.CostPerKwh = settings.CostPerKwh;
+        return dto;
     }
+
     public async Task<OrganisationResponseDto?> UpdateOrganisationAsync(
         Guid userId, Guid organisationId, OrganisationRequestDto request)
     {
@@ -47,10 +69,11 @@ public class OrganisationService(
         if (organisation is null) return null;
         organisation.Name = request.Name;
         organisation.Type = request.Type;
-        organisation.EnergyBudgetKwh = request.EnergyBudgetKwh;
+        organisation.MonthlyBudgetUsd = request.MonthlyBudgetUsd;
         await repository.SaveChangesAsync();
         return MapToDto(organisation);
     }
+
     public async Task<bool> DeleteOrganisationAsync(Guid userId, Guid organisationId)
     {
         var organisation = await repository.GetByIdAsync(userId, organisationId);
@@ -59,14 +82,16 @@ public class OrganisationService(
         await repository.SaveChangesAsync();
         return true;
     }
+
     public async Task<bool> HasOrganisationAsync(Guid userId)
         => await repository.ExistsAsync(userId);
+
     private static OrganisationResponseDto MapToDto(Organisation o) => new()
     {
         OrganisationId = o.OrganisationId,
         Name = o.Name,
         Type = o.Type,
-        EnergyBudgetKwh = o.EnergyBudgetKwh,
+        MonthlyBudgetUsd = o.MonthlyBudgetUsd,
         DeviceCount = o.Devices?.Count ?? 0
     };
 }

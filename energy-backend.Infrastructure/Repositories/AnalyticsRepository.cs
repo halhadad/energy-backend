@@ -1,22 +1,13 @@
-using energy_backend.Application.Interfaces;
-using energy_backend.Application.Models.Projections;
+using energy_backend.Core.Projections;
 using energy_backend.Core.Enums;
 using energy_backend.Core.Interfaces;
 using energy_backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-namespace energy_backend.Core.Repositories;
+
+namespace energy_backend.Infrastructure.Repositories;
 
 public class AnalyticsRepository(EnergyDbContext context) : IAnalyticsRepository
 {
-    public async Task<decimal> GetUserCostRateAsync(Guid orgId)
-        => (decimal)await context.Organisations
-            .Where(o => o.OrganisationId == orgId)
-            .Select(o => o.EnergyCostPerKwh)
-            .FirstOrDefaultAsync();
-
-    // CHANGED: was two near-identical methods (GetSnapshotMetricsAsync returning
-    // AggregateSnapshotRow, and GetRawAggregateMetricsAsync returning a 9-tuple).
-    // Collapsed into one method returning the named AggregateMetricRow projection.
     public async Task<List<AggregateMetricRow>> GetAggregateMetricsAsync(
         Guid orgId, DateTime start, DateTime end, TimeGranularity granularity)
     {
@@ -28,6 +19,7 @@ public class AnalyticsRepository(EnergyDbContext context) : IAnalyticsRepository
             TimeGranularity.Month => context.AggregateMonthEnergies.AsNoTracking(),
             _ => throw new ArgumentOutOfRangeException(nameof(granularity))
         };
+
         return await query
             .Where(a => a.OrgId == orgId && a.Timestamp >= start && a.Timestamp < end)
             .OrderBy(a => a.Timestamp)
@@ -55,20 +47,25 @@ public class AnalyticsRepository(EnergyDbContext context) : IAnalyticsRepository
             TimeGranularity.Month => context.AggregateMonthEnergies.AsNoTracking(),
             _ => throw new ArgumentOutOfRangeException(nameof(granularity))
         };
+
         var rows = await query
             .Where(a => a.OrgId == orgId && a.Timestamp >= start && a.Timestamp < end)
             .Select(a => new { a.Timestamp, a.DeviceId, a.TotalActiveEnergyKwh })
             .ToListAsync();
+
         var deviceIds = rows.Where(r => r.DeviceId != null).Select(r => r.DeviceId).Distinct().ToList();
         var deviceNames = await context.Devices
             .Where(d => deviceIds.Contains(d.DeviceId))
             .Select(d => new { d.DeviceId, d.Name })
             .ToDictionaryAsync(d => d.DeviceId, d => d.Name);
+
         return rows
             .Where(r => r.DeviceId != null)
             .Select(r => new DeviceSnapshotRow(
                 r.Timestamp,
-                deviceNames.TryGetValue(r.DeviceId!.Value, out var name) ? name : r.DeviceId.Value.ToString(),
+                deviceNames.TryGetValue(r.DeviceId!.Value, out var name)
+                    ? name
+                    : r.DeviceId.Value.ToString(),
                 r.TotalActiveEnergyKwh))
             .ToList();
     }
@@ -84,11 +81,14 @@ public class AnalyticsRepository(EnergyDbContext context) : IAnalyticsRepository
             TimeGranularity.Month => context.AggregateMonthEnergies.AsNoTracking(),
             _ => throw new ArgumentOutOfRangeException(nameof(granularity))
         };
+
         var latest = await query
             .Where(a => a.OrgId == orgId)
             .OrderByDescending(a => a.Timestamp)
             .FirstOrDefaultAsync();
+
         if (latest is null) return null;
+
         return new AggregateMetricRow(
             latest.Timestamp,
             latest.TotalActiveEnergyKwh,

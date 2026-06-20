@@ -14,8 +14,16 @@ namespace energy_backend.Controllers
     [ApiController]
     public class AlertsController(IAlertService alertService) : ControllerBase
     {
-        // Retrieves all active alerts for the authenticated user
-        // active alerts include all alert definition entities related to the user
+        [HttpGet("events")]
+        public async Task<ActionResult<IEnumerable<AlertEventDto>>> GetAlertEvents()
+        {
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+
+            var events = await alertService.GetRecentEventsAsync(userId);
+            return Ok(events);
+        }
+
         [HttpGet]
         public async Task<ActionResult<List<AlertResponseDto>>> GetActiveAlerts()
         {
@@ -39,6 +47,21 @@ namespace energy_backend.Controllers
 
             var org = await alertService.CreateAlertAsync(userId, request);
             return org is null ? BadRequest("Error creating organisation") : Ok(org);
+        }
+
+        // Manually resolves (acknowledges) a triggered alert.
+
+        [HttpPost("{alertId}/resolve")]
+        public async Task<ActionResult<bool>> ResolveAlert(Guid alertId)
+        {
+            if (alertId == Guid.Empty)
+                return BadRequest("Invalid Alert ID.");
+
+            if (!TryGetUserId(out Guid userId))
+                return Unauthorized("Invalid User.");
+
+            var resolved = await alertService.ResolveAlertAsync(userId, alertId);
+            return resolved ? Ok(true) : NotFound("Alert not found");
         }
 
         // Deletes an alert by the authenticated user.

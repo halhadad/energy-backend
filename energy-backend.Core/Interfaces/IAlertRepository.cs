@@ -12,9 +12,9 @@ public interface IAlertRepository
     Task<IEnumerable<Alert>> GetByUserIdAsync(Guid userId);
     Task<Alert?> GetByIdAsync(Guid userId, Guid alertId);
 
-    /// <summary>Used by background evaluators — returns all alerts with Organisation nav loaded.</summary>
     Task<List<Alert>> GetAllWithOrganisationsAsync();
 
+    Task<IEnumerable<AlertEvent>> GetRecentEventsByUserIdAsync(Guid userId, int count = 50);
     Task AddAsync(Alert alert);
     Task AddEventAsync(AlertEvent alertEvent);
     Task DeleteAsync(Alert alert);

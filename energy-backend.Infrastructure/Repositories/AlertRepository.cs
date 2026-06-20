@@ -34,6 +34,19 @@ namespace energy_backend.Infrastructure.Repositories
         {
             return await context.Alerts
                 .Include(a => a.Organisation)
+                    .ThenInclude(o => o!.User)
+                        .ThenInclude(u => u!.Setting)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<AlertEvent>> GetRecentEventsByUserIdAsync(Guid userId, int count = 50)
+        {
+            return await context.AlertEvents
+                .Include(e => e.Alert)
+                    .ThenInclude(a => a!.Organisation)
+                .Where(e => e.Alert!.Organisation!.UserId == userId)
+                .OrderByDescending(e => e.TriggeredAt)
+                .Take(count)
                 .ToListAsync();
         }
 
