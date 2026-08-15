@@ -1,8 +1,15 @@
-# Energy Monitor — Backend
+# Energy Monitor
+
+Full-stack IoT energy monitoring app: live dashboard, historical analytics, and threshold alerts over a real-time feed.
+
+- **`/`** — the backend (this directory): .NET 9 REST API + SignalR hub, documented below.
+- **[`frontend/`](frontend/README.md)** — the React dashboard that consumes it.
+
+## Backend
 
 .NET 9 REST API and real-time push server for an energy monitoring dashboard. Models a Shelly 3EM three-phase energy monitor: simulates live readings, rolls them up into aggregate buckets, evaluates power-threshold alerts, and streams everything to connected clients over SignalR.
 
-## Run locally
+### Run locally
 
 Requires .NET 9 SDK and a SQL Server instance (or SQL Server LocalDB).
 
@@ -34,7 +41,7 @@ dotnet run --project energy-backend
 
 The API starts on `http://localhost:5041`. Schema is created automatically via `EnsureCreated` on first run — no migrations step needed.
 
-## Architecture
+### Architecture
 
 Four projects; dependencies flow inward:
 
@@ -47,7 +54,7 @@ energy-backend.Core                     domain entities, enums, repository inter
 
 Each layer owns a `DependencyInjection.cs`. Register new services in the matching layer's file.
 
-## Data model
+### Data model
 
 Raw `EnergyReading` rows (5-second cadence) are rolled up into four pre-computed aggregate tiers:
 
@@ -57,7 +64,7 @@ EnergyReading -> AggregateMinuteEnergy -> AggregateHourEnergy -> AggregateDayEne
 
 Each aggregate has a unique index on `{DeviceId, Timestamp}`. All kWh accounting derives from `ActiveEnergyKwh` on the reading — never a hardcoded interval constant, so the simulator interval can change freely.
 
-## Background workers
+### Background workers
 
 | Worker | What it does |
 |---|---|
@@ -68,7 +75,7 @@ Each aggregate has a unique index on `{DeviceId, Timestamp}`. All kWh accounting
 
 Each tier has exactly one writer. The downsampler does not write minute buckets; the simulator worker does not write hour/day/month.
 
-## Real-time (SignalR)
+### Real-time (SignalR)
 
 Single hub `UnifiedHub` at `/unifiedHub`, JWT-gated. Clients subscribe to groups by org:
 
@@ -79,7 +86,7 @@ Single hub `UnifiedHub` at `/unifiedHub`, JWT-gated. Clients subscribe to groups
 
 JWT auth for WebSockets: the hub reads `access_token` from the query string since browsers cannot set `Authorization` headers on WS connections.
 
-## Alert state machine
+### Alert state machine
 
 ```
 Monitoring -> Triggered  (power crosses threshold while alert is not yet active)
@@ -88,7 +95,7 @@ Triggered  -> Resolved   (manual resolve only; sets ResolvedAt — terminal, nev
 
 The evaluator skips any alert where `ResolvedAt is not null`. Email notifications are gated by a 24-hour per-alert cooldown and the org owner's `Setting.RequireEmail` flag.
 
-## Configuration
+### Configuration
 
 | Section | Key | Default | Notes |
 |---|---|---|---|
@@ -104,7 +111,7 @@ The evaluator skips any alert where `ResolvedAt is not null`. Email notification
 | `Email` | `Provider` | `Log` | `Log` (dev) or `Smtp` |
 | `Email` | `Host`, `Port`, `Username`, `Password` | — | SMTP credentials (user-secrets in dev) |
 
-## Tests
+### Tests
 
 A self-contained console harness — no xUnit, no external packages, builds offline.
 
@@ -114,7 +121,7 @@ dotnet run --project energy-backend.Tests
 
 Covers page-orchestration logic, aggregate math, and alert cooldown gating. Exits non-zero on failure.
 
-## Production notes
+### Production notes
 
 - **Database**: Uses `EnsureCreated` — fine for demos, use migrations for production.
 - **Schema changes**: New columns added to a live DB need a manual `ALTER TABLE` since there are no migrations.

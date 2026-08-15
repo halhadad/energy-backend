@@ -364,3 +364,9 @@ FodyWeavers.xsd
 
 # EF Core migrations (generated, not checked in)
 **/Migrations/
+
+# Claude Code
+CLAUDE.md
+.claude/
+repomix-output.md
+repomix.config.json
