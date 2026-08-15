@@ -368,5 +368,5 @@ FodyWeavers.xsd
 # Claude Code
 CLAUDE.md
 .claude/
-repomix-output.md
+repomix-output.*
 repomix.config.json
