@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using energy_backend.Core.Interfaces;
-using energy_backend.Data;
-using energy_backend.Entities;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace energy_backend.Infrastructure.Repositories
@@ -25,6 +25,12 @@ namespace energy_backend.Infrastructure.Repositories
             return await context.Organisations
                 .Include(o => o.Devices)
                 .FirstOrDefaultAsync(o => o.OrganisationId == organisationId && o.UserId == userId);
+        }
+
+        public async Task<Organisation?> GetByOrganisationIdAsync(Guid organisationId)
+        {
+            return await context.Organisations
+                .FirstOrDefaultAsync(o => o.OrganisationId == organisationId);
         }
 
         public async Task<Organisation?> AddAsync(Organisation organisation)

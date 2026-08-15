@@ -1,29 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using energy_backend.Application.Models.SignalR;
+namespace energy_backend.Application.Models;
 
-namespace energy_backend.Application.Models
+public class OrganisationAnalyticsDto
 {
-    public class OrganisationAnalyticsDto
-    {
-        public BreakdownDto PieChartDay { get; set; } = new();
-        public BreakdownDto PieChartWeek { get; set; } = new();
-        public BreakdownDto PieChartMonth { get; set; } = new();
-        public TimeSeriesDto ConsumptionChartDay { get; set; } = new();
-        public TimeSeriesDto ConsumptionChartWeek { get; set; } = new();
-        public TimeSeriesDto ConsumptionChartMonth { get; set; } = new();
-        public TimeSeriesDto CostChartDay { get; set; } = new();
-        public TimeSeriesDto CostChartWeek { get; set; } = new();
-        public TimeSeriesDto CostChartMonth { get; set; } = new();
-        public TimeSeriesDto CarbonChartDay { get; set; } = new();
-        public TimeSeriesDto CarbonChartWeek { get; set; } = new();
-        public TimeSeriesDto CarbonChartMonth { get; set; } = new();
-        // so-far metrics for the month
-        public float Consumption { get; set; }
-        public float Cost { get; set; }
-        public float Carbon { get; set; }
-    }
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+
+    public AnalyticsSummaryDto Summary { get; set; } = new();
+    public List<DeviceBreakdownDto> DeviceBreakdown { get; set; } = new();
+
+    public List<EnergyMetricRollupDto> MinuteRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> HourRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> DayRollups { get; set; } = new();
+    public List<EnergyMetricRollupDto> MonthRollups { get; set; } = new();
 }

@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>energy_backend</RootNamespace>
+    <UserSecretsId>9895b530-9823-4401-8b01-98b5d605da93</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +23,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\energy-backend.Application\energy-backend.Application.csproj" />
+    <ProjectReference Include="..\energy-backend.Core\energy-backend.Core.csproj" />
     <ProjectReference Include="..\energy-backend.Infrastructure\energy-backend.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

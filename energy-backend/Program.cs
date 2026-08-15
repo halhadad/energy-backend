@@ -1,49 +1,39 @@
-using System.Text;
-using energy_backend.Application;
-using energy_backend.Data;
-using energy_backend.Application.Hubs;
-using energy_backend.Infrastructure;
-using energy_backend.Infrastructure.Services;
-using energy_backend.Services;
+using energy_backend.Api;
+using energy_backend.Application.Models;
+using energy_backend.Api.Hubs;
+using energy_backend.Application.Configuration;
+using energy_backend.Infrastructure.Data;
+using energy_backend.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using energy_backend.Infrastructure.Seeding;
-using energy_backend.Core.Interfaces;
-using energy_backend.Infrastructure.Repositories;
-using energy_backend.Application.Services;
-using energy_backend.Hubs;
-using energy_backend.Infrastructure.SignalR;
-
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//cors
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: "AllowFrontend",
-                      policy =>
-                      {
-                          policy.WithOrigins("http://localhost:5173")
-                                        .AllowAnyMethod()
-                                        .AllowAnyHeader()
-                                        .AllowCredentials();
-                      });
-});
 
-// Add services to the container.
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("AppSettings"));
+
+
+builder.Services.AddCors(options =>
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()));
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<EnergyDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("energy-backend.Infrastructure")));
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -55,79 +45,82 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]))
+                Encoding.UTF8.GetBytes(GetRequiredJwtToken(builder.Configuration)))
         };
 
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/unifiedHub"))
+                    context.Token = token;
 
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/overviewHub"))
-                {
-                    context.Token = accessToken;
-                }
                 return Task.CompletedTask;
             }
         };
     });
-// Services
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<OrganisationAnalyticsService>();
-builder.Services.AddScoped<IOrganisationService, OrganisationService>();
-builder.Services.AddScoped<IDeviceService, DeviceService>();
-builder.Services.AddScoped<IRealTimeService, RealTimeService>();
 
-// Repos
-builder.Services.AddScoped<IAggregatedEnergyRepository, AggregatedEnergyRepository>();
-builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
-builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
-builder.Services.AddSingleton<ConnectionTracker>();
-
-
-
-
-builder.Services.AddApplicationServices();
-
-builder.Services.AddSignalR();
-
-builder.Services.AddHostedService<AggregationService>();
-builder.Services.AddHostedService<EnergyReadingSimulator>();
-
-
+builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-
-//seeding
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
-    await SeedData.SeedEnergyReadingsEvery5SecAsync(context); // <- raw 5s data
-    await SeedData.SeedAggregatedEnergyDbAsync(context);        // <- hourly aggregates
-}
-
-
-
+await SeedAggregatedEnergyDbAsync(app.Services);
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
-app.UseRouting(); 
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseWebSockets();
 
 app.MapControllers();
-app.UseWebSockets();
-app.MapHub<RealTimeHub>("/overviewHub");
+app.MapHub<UnifiedHub>("/unifiedHub");
 
 app.Run();
+
+static string GetRequiredJwtToken(IConfiguration configuration)
+{
+    var token = configuration["AppSettings:Token"];
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        throw new InvalidOperationException(
+            "JWT token is not configured. Set AppSettings:Token via dotnet user-secrets or the AppSettings__Token environment variable.");
+    }
+
+    // hmac-sha512 needs at least 64 bytes, fail early with a clear message
+    if (Encoding.UTF8.GetByteCount(token) < 64)
+    {
+        throw new InvalidOperationException(
+            "AppSettings:Token must be at least 64 bytes for HMAC-SHA512 signing.");
+    }
+
+    return token;
+}
+
+static async Task SeedAggregatedEnergyDbAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var context = scope.ServiceProvider.GetRequiredService<EnergyDbContext>();
+    var settings = scope.ServiceProvider.GetRequiredService<EnergySettings>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        // no migrations here, just make sure the schema exists on first run
+        await context.Database.EnsureCreatedAsync();
+        await SeedData.SeedAggregatedEnergyDbAsync(context, settings.CostPerKwh);
+        logger.LogInformation("Seed completed.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Seeding failed.");
+    }
+}

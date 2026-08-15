@@ -1,24 +1,28 @@
-﻿using energy_backend.Data;
-using energy_backend.Entities;
-using Microsoft.AspNetCore.Http;
+using energy_backend.Application.Interfaces;
+using energy_backend.Application.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-namespace energy_backend.Controllers
+namespace energy_backend.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class EnergyController(ISnapshotService aggregationService) : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class EnergyController(EnergyDbContext context) : ControllerBase
+    [Authorize]
+    [HttpPost("snapshot")]
+    public async Task<ActionResult<AggregationResultDto>> GetSnapshot([FromBody] AggregationRequestDto request)
     {
-        //some logic later
-        private readonly EnergyDbContext _context = context;
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        [HttpGet]
-        public async Task<ActionResult<Energy>> GetEnergy()
+        try
         {
-            // Simulate fetching energy data
-            var energyData = await _context.Energies.FirstOrDefaultAsync();
-            return Ok(energyData);
+            var result = await aggregationService.GetSnapshotAsync(request);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "Error retrieving snapshot data.");
         }
     }
 }

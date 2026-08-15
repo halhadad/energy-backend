@@ -361,3 +361,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# EF Core migrations (generated, not checked in)
+**/Migrations/
+
+# Claude Code
+CLAUDE.md
+.claude/
+repomix-output.*
+repomix.config.json
